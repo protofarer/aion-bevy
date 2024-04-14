@@ -1,14 +1,17 @@
 use bevy::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
-use crate::{BOTTOM_WALL, LEFT_WALL, PADDLE_SPEED, RIGHT_WALL, TOP_WALL};
+use crate::{
+    GameState, BOTTOM_WALL, INIT_LIVES, INIT_SHIP_ROTATION, INIT_SHIP_SPEED, INIT_SHIP_TURN_SPEED,
+    LEFT_WALL, RIGHT_WALL, TOP_WALL,
+};
 
 pub fn play_plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
             apply_velocity,
-            move_paddle,
+            move_ship,
             // check_for_collisions,
             // play_collision_sound,
             // process_score,
@@ -24,7 +27,9 @@ pub fn play_plugin(app: &mut App) {
             draw_boundary, // run_end.run_if(in_state(GameState::End)),
                            // (update_score_ui, bevy::window::close_on_esc, run_match).in_set(MatchSet),
         ),
-    );
+    )
+    .configure_sets(Update, (PlaySet.run_if(in_state(GameState::Match))))
+    .configure_sets(FixedUpdate, (PlaySet.run_if(in_state(GameState::Match))));
     // .add_systems(OnEnter(GameState::Match), setup_match)
     // .add_systems(OnEnter(GameState::End), setup_end)
     // .add_systems(OnExit(GameState::Match), despawn_screen::<OnMatchView>)
@@ -51,10 +56,37 @@ pub enum Player {
 }
 
 #[derive(Component)]
-pub struct Paddle;
+pub struct Lives(usize);
+
+#[derive(Component)]
+pub struct ShipStats {
+    move_speed: f32,
+    turn_speed: f32,
+}
+
+impl Default for ShipStats {
+    fn default() -> Self {
+        ShipStats {
+            move_speed: INIT_SHIP_SPEED,
+            turn_speed: INIT_SHIP_TURN_SPEED,
+        }
+    }
+}
 
 #[derive(Component, Deref, DerefMut, Debug)]
 pub struct Velocity(pub Vec2);
+
+#[derive(Component)]
+pub struct Collider;
+
+#[derive(Component)]
+pub struct ScoreboardUi(Player);
+
+#[derive(Component)]
+pub struct OnMatchView;
+
+#[derive(Component, Clone)]
+pub struct OnEndScreen;
 
 pub fn setup_play(
     // mut scores: ResMut<Scores>,
@@ -73,13 +105,19 @@ pub fn setup_play(
     commands.spawn((
         SpriteBundle {
             transform: Transform {
+                // once texture used
+                // transform: Transform::from_xyz(
+                //     LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
+                //     BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
+                //     0.,
+                // ),
                 translation: Vec3::new(
                     LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
                     BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
                     0.,
                 ),
-                scale: Vec3::new(50., 50., 0.0),
-                ..default()
+                scale: Vec3::new(20., 50., 0.0),
+                rotation: INIT_SHIP_ROTATION,
             },
             sprite: Sprite {
                 color: Color::rgb(1., 1., 1.),
@@ -87,9 +125,10 @@ pub fn setup_play(
             },
             ..default()
         },
-        Paddle,
+        ShipStats::default(),
         Player::A,
-        // Collider,
+        Lives(INIT_LIVES),
+        Collider,
         // OnMatchView,
     ));
 
@@ -179,63 +218,54 @@ pub fn draw_boundary(mut painter: ShapePainter) {
 
 pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
     for (mut transform, velocity) in &mut query {
+        // TODO apply ship speed in directio of its rotation vector
+        // transform.rotation
         transform.translation.x += velocity.x * time.delta_seconds();
         transform.translation.y += velocity.y * time.delta_seconds();
     }
 }
 
-pub fn move_paddle(
+pub fn move_ship(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &Player), With<Paddle>>,
+    mut query: Query<(&mut Transform, &ShipStats)>,
     time: Res<Time>,
 ) {
-    for (mut transform, player) in query.iter_mut() {
-        let top_bound = TOP_WALL;
-        let bottom_bound = BOTTOM_WALL;
-        let left_bound = LEFT_WALL;
-        let right_bound = RIGHT_WALL;
+    for (mut transform, ship) in query.iter_mut() {
+        let mut thrust = 0.;
+        let mut rotation_sign = 0.;
 
-        match player {
-            Player::A => {
-                let mut y_direction = 0.;
-                let mut x_direction = 0.;
+        // if keyboard_input.pressed(KeyCode::KeyW) {
+        //     y_direction += 1.;
+        // }
+        if keyboard_input.pressed(KeyCode::KeyS) {
+            thrust += 1.;
+        }
+        if keyboard_input.pressed(KeyCode::KeyA) {
+            rotation_sign += 1.;
+        }
+        if keyboard_input.pressed(KeyCode::KeyD) {
+            rotation_sign -= 1.;
+        }
 
-                if keyboard_input.pressed(KeyCode::KeyW) {
-                    y_direction += 1.;
-                }
-                if keyboard_input.pressed(KeyCode::KeyS) {
-                    y_direction -= 1.;
-                }
-                if keyboard_input.pressed(KeyCode::KeyD) {
-                    x_direction += 1.;
-                }
-                if keyboard_input.pressed(KeyCode::KeyA) {
-                    x_direction -= 1.;
-                }
+        transform.rotate_z(rotation_sign * ship.turn_speed * time.delta_seconds());
 
-                let new_paddle_y_position =
-                    transform.translation.y + y_direction * PADDLE_SPEED * time.delta_seconds();
-                transform.translation.y = new_paddle_y_position.clamp(bottom_bound, top_bound);
+        // get fwd vector by applying current rot to ships init facing vec
+        let movement_direction = (transform.rotation * INIT_SHIP_ROTATION) * Vec3::X;
+        let movement_distance = thrust * ship.move_speed * time.delta_seconds();
+        let translation_delta = movement_direction * movement_distance;
+        transform.translation += translation_delta;
 
-                let new_paddle_x_position =
-                    transform.translation.x + x_direction * PADDLE_SPEED * time.delta_seconds();
-                transform.translation.x = new_paddle_x_position.clamp(left_bound, right_bound);
-            }
-            _ => {} // Player::B => {
-                    //     let mut direction = 0.;
-
-                    //     if keyboard_input.pressed(KeyCode::ArrowUp) {
-                    //         direction += 1.;
-                    //     }
-                    //     if keyboard_input.pressed(KeyCode::ArrowDown) {
-                    //         direction -= 1.;
-                    //     }
-
-                    //     let new_paddle_position =
-                    //         transform.translation.y + direction * PADDLE_SPEED * time.delta_seconds();
-
-                    //     transform.translation.y = new_paddle_position.clamp(bottom_bound, top_bound);
-                    // }
+        if (transform.translation.y >= TOP_WALL) {
+            transform.translation.y = BOTTOM_WALL + (transform.translation.y - TOP_WALL);
+        }
+        if (transform.translation.y <= BOTTOM_WALL) {
+            transform.translation.y = TOP_WALL - (BOTTOM_WALL - transform.translation.y);
+        }
+        if (transform.translation.x >= RIGHT_WALL) {
+            transform.translation.x = LEFT_WALL + (transform.translation.x - RIGHT_WALL);
+        }
+        if (transform.translation.x <= LEFT_WALL) {
+            transform.translation.x = RIGHT_WALL - (LEFT_WALL - transform.translation.x);
         }
     }
 }
