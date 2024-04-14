@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
 use crate::{
-    GameState, BOTTOM_WALL, INIT_LIVES, INIT_SHIP_ROTATION, INIT_SHIP_SPEED, INIT_SHIP_TURN_SPEED,
-    LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    avatars::PlayerShip, GameState, BOTTOM_WALL, INIT_HEALTH, INIT_LIVES, INIT_SHIP_MOVE_SPEED,
+    INIT_SHIP_ROTATION, INIT_SHIP_TURN_SPEED, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -56,7 +56,13 @@ pub enum Player {
 }
 
 #[derive(Component)]
-pub struct Lives(usize);
+pub struct Health(usize);
+
+impl Default for Health {
+    fn default() -> Self {
+        Self(INIT_HEALTH)
+    }
+}
 
 #[derive(Component)]
 pub struct ShipStats {
@@ -66,8 +72,8 @@ pub struct ShipStats {
 
 impl Default for ShipStats {
     fn default() -> Self {
-        ShipStats {
-            move_speed: INIT_SHIP_SPEED,
+        Self {
+            move_speed: INIT_SHIP_MOVE_SPEED,
             turn_speed: INIT_SHIP_TURN_SPEED,
         }
     }
@@ -102,35 +108,36 @@ pub fn setup_play(
     // match_.round_count = 0;
 
     // Paddle A
-    commands.spawn((
-        SpriteBundle {
-            transform: Transform {
-                // once texture used
-                // transform: Transform::from_xyz(
-                //     LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                //     BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                //     0.,
-                // ),
-                translation: Vec3::new(
-                    LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                    BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                    0.,
-                ),
-                scale: Vec3::new(20., 50., 0.0),
-                rotation: INIT_SHIP_ROTATION,
-            },
-            sprite: Sprite {
-                color: Color::rgb(1., 1., 1.),
-                ..default()
-            },
-            ..default()
-        },
-        ShipStats::default(),
-        Player::A,
-        Lives(INIT_LIVES),
-        Collider,
-        // OnMatchView,
-    ));
+    // commands.spawn((
+    //     SpriteBundle {
+    //         transform: Transform {
+    //             // once texture used
+    //             // transform: Transform::from_xyz(
+    //             //     LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
+    //             //     BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
+    //             //     0.,
+    //             // ),
+    //             translation: Vec3::new(
+    //                 LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
+    //                 BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
+    //                 0.,
+    //             ),
+    //             scale: Vec3::new(20., 50., 0.0),
+    //             rotation: INIT_SHIP_ROTATION,
+    //         },
+    //         sprite: Sprite {
+    //             color: Color::rgb(1., 1., 1.),
+    //             ..default()
+    //         },
+    //         ..default()
+    //     },
+    //     ShipStats::default(),
+    //     Player::A,
+    //     Health(INIT_LIVES),
+    //     Collider,
+    //     // OnMatchView,
+    // ));
+    commands.spawn(PlayerShip::default());
 
     // Ball
     // commands.spawn((
@@ -234,9 +241,6 @@ pub fn move_ship(
         let mut thrust = 0.;
         let mut rotation_sign = 0.;
 
-        // if keyboard_input.pressed(KeyCode::KeyW) {
-        //     y_direction += 1.;
-        // }
         if keyboard_input.pressed(KeyCode::KeyS) {
             thrust += 1.;
         }

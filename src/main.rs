@@ -5,6 +5,7 @@ use bevy_vector_shapes::Shape2dPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
 use systems::setup;
 
+mod avatars;
 mod fps;
 mod play;
 mod systems;
@@ -14,10 +15,11 @@ const LEFT_WALL: f32 = -450.;
 const RIGHT_WALL: f32 = 450.;
 const BOTTOM_WALL: f32 = -300.;
 const TOP_WALL: f32 = 300.;
-const INIT_SHIP_SPEED: f32 = 100.;
+const INIT_SHIP_MOVE_SPEED: f32 = 300.;
 const INIT_SHIP_TURN_SPEED: f32 = 5.;
 const INIT_LIVES: usize = 2;
 const INIT_SHIP_ROTATION: Quat = Quat::from_xyzw(0., 0., 1., 0.);
+const INIT_HEALTH: usize = 10;
 
 fn main() {
     App::new()
