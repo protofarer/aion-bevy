@@ -20,6 +20,7 @@ const INIT_SHIP_TURN_SPEED: f32 = 5.;
 const INIT_LIVES: usize = 2;
 const INIT_SHIP_ROTATION: Quat = Quat::from_xyzw(0., 0., 1., 0.);
 const INIT_HEALTH: usize = 10;
+const INIT_SHIP_PROJECTILE_MOVE_SPEED: f32 = 500.;
 
 fn main() {
     App::new()

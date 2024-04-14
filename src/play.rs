@@ -2,8 +2,10 @@ use bevy::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
 use crate::{
-    avatars::PlayerShip, GameState, BOTTOM_WALL, INIT_HEALTH, INIT_LIVES, INIT_SHIP_MOVE_SPEED,
-    INIT_SHIP_ROTATION, INIT_SHIP_TURN_SPEED, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    avatars::{Boxoid, PlayerShip},
+    GameState, BOTTOM_WALL, INIT_HEALTH, INIT_LIVES, INIT_SHIP_MOVE_SPEED,
+    INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_ROTATION, INIT_SHIP_TURN_SPEED, LEFT_WALL,
+    RIGHT_WALL, TOP_WALL,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -56,7 +58,7 @@ pub enum Player {
 }
 
 #[derive(Component)]
-pub struct Health(usize);
+pub struct Health(pub usize);
 
 impl Default for Health {
     fn default() -> Self {
@@ -75,6 +77,19 @@ impl Default for ShipStats {
         Self {
             move_speed: INIT_SHIP_MOVE_SPEED,
             turn_speed: INIT_SHIP_TURN_SPEED,
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct ProjectileStats {
+    move_speed: f32,
+}
+
+impl Default for ProjectileStats {
+    fn default() -> Self {
+        Self {
+            move_speed: INIT_SHIP_PROJECTILE_MOVE_SPEED,
         }
     }
 }
@@ -138,6 +153,7 @@ pub fn setup_play(
     //     // OnMatchView,
     // ));
     commands.spawn(PlayerShip::default());
+    commands.spawn(Boxoid::new(400., 200.));
 
     // Ball
     // commands.spawn((
