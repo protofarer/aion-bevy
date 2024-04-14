@@ -2,9 +2,9 @@ use bevy::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
 use crate::{
-    avatars::{Boxoid, PlayerShip},
+    avatars::{Boxoid, PlayerShip, Projectile},
     GameState, BOTTOM_WALL, INIT_HEALTH, INIT_LIVES, INIT_SHIP_MOVE_SPEED,
-    INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_ROTATION, INIT_SHIP_TURN_SPEED, LEFT_WALL,
+    INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_ROTATION, INIT_SHIP_TURN_RATE, LEFT_WALL,
     RIGHT_WALL, TOP_WALL,
 };
 
@@ -76,14 +76,14 @@ impl Default for ShipStats {
     fn default() -> Self {
         Self {
             move_speed: INIT_SHIP_MOVE_SPEED,
-            turn_speed: INIT_SHIP_TURN_SPEED,
+            turn_speed: INIT_SHIP_TURN_RATE,
         }
     }
 }
 
 #[derive(Component)]
 pub struct ProjectileStats {
-    move_speed: f32,
+    pub move_speed: f32,
 }
 
 impl Default for ProjectileStats {
@@ -118,42 +118,9 @@ pub fn setup_play(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     info!("IN setup_match");
-    // scores.a = 0;
-    // scores.b = 0;
-    // match_.round_count = 0;
-
-    // Paddle A
-    // commands.spawn((
-    //     SpriteBundle {
-    //         transform: Transform {
-    //             // once texture used
-    //             // transform: Transform::from_xyz(
-    //             //     LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-    //             //     BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-    //             //     0.,
-    //             // ),
-    //             translation: Vec3::new(
-    //                 LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-    //                 BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-    //                 0.,
-    //             ),
-    //             scale: Vec3::new(20., 50., 0.0),
-    //             rotation: INIT_SHIP_ROTATION,
-    //         },
-    //         sprite: Sprite {
-    //             color: Color::rgb(1., 1., 1.),
-    //             ..default()
-    //         },
-    //         ..default()
-    //     },
-    //     ShipStats::default(),
-    //     Player::A,
-    //     Health(INIT_LIVES),
-    //     Collider,
-    //     // OnMatchView,
-    // ));
     commands.spawn(PlayerShip::default());
     commands.spawn(Boxoid::new(400., 200.));
+    commands.spawn(Projectile::new(500., 200., None, None, Some(Color::RED)));
 
     // Ball
     // commands.spawn((

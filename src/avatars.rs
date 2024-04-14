@@ -1,8 +1,9 @@
 use bevy::prelude::*;
 
 use crate::{
+    archetypes::gen_particle,
     play::{Collider, Health, Player, ProjectileStats, ShipStats},
-    BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -144,21 +145,30 @@ impl Into<Quat> for Heading {
     }
 }
 
-#[derive(Bundle)]
-pub struct Projectile {
-    sprite: SpriteBundle,
-    stats: ProjectileStats,
-    collider: Collider,
+#[derive(Component)]
+pub struct ParticleStats {
+    pub move_speed: Speed,
 }
 
-impl Projectile {
-    pub fn new(x: f32, y: f32, heading: Option<Heading>, color: Option<Color>) -> Self {
-        let rotation = heading.unwrap_or_default().into();
+#[derive(Bundle)]
+pub struct Particle {
+    sprite: SpriteBundle,
+    stats: ParticleStats,
+}
+
+impl Particle {
+    pub fn new(
+        x: f32,
+        y: f32,
+        heading: Option<Heading>,
+        speed: Option<Speed>,
+        color: Option<Color>,
+    ) -> Self {
         Self {
             sprite: SpriteBundle {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    rotation,
+                    rotation: INIT_SHIP_ROTATION,
                     ..default()
                 },
                 sprite: Sprite {
@@ -167,13 +177,12 @@ impl Projectile {
                 },
                 ..default()
             },
-            stats: ProjectileStats::default(),
-            collider: Collider,
+            stats: ParticleStats { move_speed: 0. },
         }
     }
 }
 
-impl Default for Projectile {
+impl Default for Particle {
     fn default() -> Self {
         Self {
             sprite: SpriteBundle {
@@ -186,13 +195,47 @@ impl Default for Projectile {
                     rotation: INIT_SHIP_ROTATION,
                     ..default()
                 },
-                sprite: Sprite {
-                    color: Color::ORANGE_RED,
-                    ..default()
-                },
                 ..default()
             },
-            stats: ProjectileStats::default(),
+            stats: ParticleStats { move_speed: 0. },
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct Projectile {
+    sprite: SpriteBundle,
+    stats: ParticleStats,
+    collider: Collider,
+}
+
+impl Projectile {
+    pub fn new(
+        x: f32,
+        y: f32,
+        heading: Option<Heading>,
+        speed: Option<Speed>,
+        color: Option<Color>,
+    ) -> Self {
+        let particle = gen_particle(x, y, heading, speed, color);
+        let sprite = particle.0;
+        let stats = particle.1;
+        Self {
+            sprite,
+            stats,
+            collider: Collider,
+        }
+    }
+}
+
+impl Default for Projectile {
+    fn default() -> Self {
+        let particle = gen_particle(0., 0., None, None, None);
+        let sprite = particle.0;
+        let stats = particle.1;
+        Self {
+            sprite,
+            stats,
             collider: Collider,
         }
     }
