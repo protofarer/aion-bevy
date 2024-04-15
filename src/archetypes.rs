@@ -1,20 +1,23 @@
 use bevy::prelude::*;
 
 use crate::{
-    avatars::{Heading, ParticleStats},
-    play::{Collider, Health, Player, ProjectileStats, ShipStats},
-    Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    avatars::Heading, components::MoveSpeed, Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED,
+    INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
-pub type ArchParticle = (SpriteBundle, ParticleStats);
+pub type ArchParticle = (SpriteBundle, MoveSpeed);
 
 pub fn gen_particle(
     x: f32,
     y: f32,
     heading: Option<Heading>,
-    speed: Option<Speed>,
+    move_speed: Option<Speed>,
     color: Option<Color>,
 ) -> ArchParticle {
+    let move_speed = match move_speed {
+        Some(x) => MoveSpeed(x),
+        None => MoveSpeed::default(),
+    };
     (
         SpriteBundle {
             transform: Transform {
@@ -28,8 +31,6 @@ pub fn gen_particle(
             },
             ..default()
         },
-        ParticleStats {
-            move_speed: speed.unwrap_or_default(),
-        },
+        move_speed,
     )
 }

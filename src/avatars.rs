@@ -1,28 +1,28 @@
 use bevy::{
+    pbr::wireframe::Wireframe,
     prelude::*,
     sprite::{Material2d, MaterialMesh2dBundle, Mesh2dHandle},
+    utils::{Duration, Instant},
 };
+use rand::Rng;
 
 use crate::{
     archetypes::gen_particle,
-    play::{Collider, Health, Player, ProjectileStats, ShipStats},
-    Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    components::{BodyRotationRate, Collider, Damage, Health, MoveSpeed, Player, TransientExistence, TurnRate},
+    Speed, BOTTOM_WALL, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION,
+    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
 pub struct PlayerShip<M: Material2d> {
     // sprite: SpriteBundle,
     mesh_bundle: MaterialMesh2dBundle<M>,
-    stats: ShipStats,
+    move_speed: MoveSpeed,
+    turn_rate: TurnRate,
     collider: Collider,
     health: Health,
     player: Player,
-    // RigidBodyCpt,
-    // RotatableBodyCpt,
-    // ColorBodyCpt,
-    // RotationalInputCpt,
     // ProjectileEmitterCpt,
-    // HealthCpt,
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -38,61 +38,75 @@ impl<M: Material2d> PlayerShip<M> {
                 mesh: mesh.into(),
                 material,
                 transform: Transform {
-                    translation: Vec3::new(x, y, 0.),
+                    translation: Vec3::new(x, y, 1.),
                     rotation: heading.unwrap_or_default().into(),
-                    scale: Vec2::splat(50.).extend(1.),
                     ..default()
                 },
                 // ::from_translation(Vec3::new(0., 0., 0.))
                 //     .with_scale(Vec2::splat(50.).extend(1.)),
                 ..default()
             },
-            // sprite: SpriteBundle {
-            //     transform: Transform {
-            //         translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-            //         rotation: heading.unwrap_or_default().into(),
-            //         ..default()
-            //     },
-            //     sprite: Sprite {
-            //         color: Color::GREEN,
-            //         ..default()
-            //     },
-            //     ..default()
-            // },
-            stats: ShipStats::default(),
             collider: Collider,
-            health: Health::default(),
+            health: Health(INIT_SHIP_HEALTH),
             player: Player::A,
+            move_speed: MoveSpeed(INIT_SHIP_MOVE_SPEED),
+            turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
         }
     }
 }
 
-// impl Default for PlayerShip {
-//     fn default() -> Self {
-//         Self {
-//             sprite: SpriteBundle {
-//                 transform: Transform {
-//                     translation: Vec3::new(
-//                         LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-//                         BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-//                         0.,
-//                     ),
-//                     scale: Vec3::new(20., 50., 0.0),
-//                     rotation: INIT_SHIP_ROTATION,
-//                 },
-//                 sprite: Sprite {
-//                     color: Color::GREEN,
-//                     ..default()
-//                 },
-//                 ..default()
-//             },
-//             stats: ShipStats::default(),
-//             collider: Collider,
-//             health: Health::default(),
-//             player: Player::A,
-//         }
-//     }
-// }
+#[derive(Bundle)]
+pub struct Asteroid<M: Material2d> {
+    // sprite: SpriteBundle,
+    mesh_bundle: MaterialMesh2dBundle<M>,
+    collider: Collider,
+    health: Health,
+    body_rotation_rate: BodyRotationRate,
+    move_speed: MoveSpeed,
+    damage: Damage,
+}
+
+impl<M: Material2d> Asteroid<M> {
+    pub fn new(
+        x: f32,
+        y: f32,
+        r: f32,
+        mesh: Handle<Mesh>,
+        material: Handle<M>,
+        heading: Option<Heading>,
+        move_speed: Option<Speed>,
+        damage: Option<i32>,
+    ) -> Self {
+        let mut rng = rand::thread_rng();
+        let body_rotation_rate = (rng.gen::<f32>() * 0.1) - 0.05;
+        let move_speed = match move_speed {
+            Some(x) => MoveSpeed(x),
+            None => MoveSpeed::default(),
+        };
+        let damage = match damage {
+            Some(x) => Damage(x),
+            None => Damage::default(),
+        };
+        Self {
+            mesh_bundle: MaterialMesh2dBundle {
+                mesh: mesh.into(),
+                material,
+                transform: Transform {
+                    translation: Vec3::new(x, y, 2.),
+                    rotation: heading.unwrap_or_default().into(),
+                    scale: Vec2::splat(1.).extend(1.),
+                    ..default()
+                },
+                ..default()
+            },
+            move_speed,
+            damage,
+            collider: Collider,
+            health: Health::default(),
+            body_rotation_rate: BodyRotationRate(body_rotation_rate),
+        }
+    }
+}
 
 #[derive(Bundle)]
 pub struct Boxoid {
@@ -168,15 +182,11 @@ impl Into<Quat> for Heading {
     }
 }
 
-#[derive(Component)]
-pub struct ParticleStats {
-    pub move_speed: Speed,
-}
-
 #[derive(Bundle)]
 pub struct Particle {
     sprite: SpriteBundle,
-    stats: ParticleStats,
+    move_speed: MoveSpeed,
+    transient_existence: TransientExistence,
 }
 
 impl Particle {
@@ -184,9 +194,19 @@ impl Particle {
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        speed: Option<Speed>,
+        move_speed: Option<Speed>,
         color: Option<Color>,
+        duration: Option<Duration>,
     ) -> Self {
+        let move_speed = match move_speed {
+            Some(x) => MoveSpeed(x),
+            None => MoveSpeed::default(),
+        };
+        let transient_existence = match duration {
+            Some(x) => TransientExistence::new(x),
+            None => TransientExistence::default(),
+        };
+
         Self {
             sprite: SpriteBundle {
                 transform: Transform {
@@ -200,7 +220,8 @@ impl Particle {
                 },
                 ..default()
             },
-            stats: ParticleStats { move_speed: 0. },
+            move_speed,
+            transient_existence,
         }
     }
 }
@@ -220,7 +241,8 @@ impl Default for Particle {
                 },
                 ..default()
             },
-            stats: ParticleStats { move_speed: 0. },
+            move_speed: MoveSpeed::default(),
+            transient_existence: TransientExistence::default(),
         }
     }
 }
@@ -228,8 +250,10 @@ impl Default for Particle {
 #[derive(Bundle)]
 pub struct Projectile {
     sprite: SpriteBundle,
-    stats: ParticleStats,
     collider: Collider,
+    damage: Damage,
+    move_speed: MoveSpeed,
+    transient_existence: TransientExistence,
 }
 
 impl Projectile {
@@ -237,16 +261,31 @@ impl Projectile {
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        speed: Option<Speed>,
+        move_speed: Option<Speed>,
         color: Option<Color>,
+        damage: Option<i32>,
+        duration: Option<Duration>,
     ) -> Self {
-        let particle = gen_particle(x, y, heading, speed, color);
+        let particle = gen_particle(x, y, heading, move_speed, color);
         let sprite = particle.0;
-        let stats = particle.1;
+        let damage = match damage {
+            Some(x) => Damage(x),
+            None => Damage::default(),
+        };
+        let transient_existence = match duration {
+            Some(x) => TransientExistence::new(x),
+            None => TransientExistence::default(),
+        };
+        let move_speed = match move_speed {
+            Some(x) => MoveSpeed(x),
+            None => MoveSpeed::default(),
+        };
         Self {
             sprite,
-            stats,
             collider: Collider,
+            damage,
+            transient_existence,
+            move_speed,
         }
     }
 }
@@ -258,8 +297,10 @@ impl Default for Projectile {
         let stats = particle.1;
         Self {
             sprite,
-            stats,
             collider: Collider,
+            damage: Damage::default(),
+            transient_existence: TransientExistence::default(),
+            move_speed: MoveSpeed::default(),
         }
     }
 }
