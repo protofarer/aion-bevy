@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    prelude::*,
+    sprite::{Material2d, MaterialMesh2dBundle, Mesh2dHandle},
+};
 
 use crate::{
     archetypes::gen_particle,
@@ -7,8 +10,9 @@ use crate::{
 };
 
 #[derive(Bundle)]
-pub struct PlayerShip {
-    sprite: SpriteBundle,
+pub struct PlayerShip<M: Material2d> {
+    // sprite: SpriteBundle,
+    mesh_bundle: MaterialMesh2dBundle<M>,
     stats: ShipStats,
     collider: Collider,
     health: Health,
@@ -21,21 +25,40 @@ pub struct PlayerShip {
     // HealthCpt,
 }
 
-impl PlayerShip {
-    pub fn new(x: f32, y: f32, heading: Option<Heading>) -> Self {
+impl<M: Material2d> PlayerShip<M> {
+    pub fn new(
+        x: f32,
+        y: f32,
+        heading: Option<Heading>,
+        mesh: Handle<Mesh>,
+        material: Handle<M>,
+    ) -> Self {
         Self {
-            sprite: SpriteBundle {
+            mesh_bundle: MaterialMesh2dBundle {
+                mesh: mesh.into(),
+                material,
                 transform: Transform {
-                    translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
+                    translation: Vec3::new(x, y, 0.),
                     rotation: heading.unwrap_or_default().into(),
+                    scale: Vec2::splat(50.).extend(1.),
                     ..default()
                 },
-                sprite: Sprite {
-                    color: Color::GREEN,
-                    ..default()
-                },
+                // ::from_translation(Vec3::new(0., 0., 0.))
+                //     .with_scale(Vec2::splat(50.).extend(1.)),
                 ..default()
             },
+            // sprite: SpriteBundle {
+            //     transform: Transform {
+            //         translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
+            //         rotation: heading.unwrap_or_default().into(),
+            //         ..default()
+            //     },
+            //     sprite: Sprite {
+            //         color: Color::GREEN,
+            //         ..default()
+            //     },
+            //     ..default()
+            // },
             stats: ShipStats::default(),
             collider: Collider,
             health: Health::default(),
@@ -44,32 +67,32 @@ impl PlayerShip {
     }
 }
 
-impl Default for PlayerShip {
-    fn default() -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(
-                        LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                        BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                        0.,
-                    ),
-                    scale: Vec3::new(20., 50., 0.0),
-                    rotation: INIT_SHIP_ROTATION,
-                },
-                sprite: Sprite {
-                    color: Color::GREEN,
-                    ..default()
-                },
-                ..default()
-            },
-            stats: ShipStats::default(),
-            collider: Collider,
-            health: Health::default(),
-            player: Player::A,
-        }
-    }
-}
+// impl Default for PlayerShip {
+//     fn default() -> Self {
+//         Self {
+//             sprite: SpriteBundle {
+//                 transform: Transform {
+//                     translation: Vec3::new(
+//                         LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
+//                         BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
+//                         0.,
+//                     ),
+//                     scale: Vec3::new(20., 50., 0.0),
+//                     rotation: INIT_SHIP_ROTATION,
+//                 },
+//                 sprite: Sprite {
+//                     color: Color::GREEN,
+//                     ..default()
+//                 },
+//                 ..default()
+//             },
+//             stats: ShipStats::default(),
+//             collider: Collider,
+//             health: Health::default(),
+//             player: Player::A,
+//         }
+//     }
+// }
 
 #[derive(Bundle)]
 pub struct Boxoid {

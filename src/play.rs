@@ -1,8 +1,8 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
 use crate::{
-    avatars::{Boxoid, PlayerShip, Projectile},
+    avatars::{Boxoid, Heading, PlayerShip, Projectile},
     GameState, BOTTOM_WALL, INIT_HEALTH, INIT_LIVES, INIT_SHIP_MOVE_SPEED,
     INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_ROTATION, INIT_SHIP_TURN_RATE, LEFT_WALL,
     RIGHT_WALL, TOP_WALL,
@@ -118,23 +118,29 @@ pub fn setup_play(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     info!("IN setup_match");
-    commands.spawn(PlayerShip::default());
-    commands.spawn(Boxoid::new(400., 200.));
-    commands.spawn(Projectile::new(500., 200., None, None, Some(Color::RED)));
+    // mesh .add(Triangle2d::default()).into()
+    // matl .add(Color::PURPLE)
+    let handle_triangle = meshes.add(Triangle2d::default());
+    let handle_purple = materials.add(Color::GREEN);
+
+    commands.spawn(PlayerShip::new(
+        0.,
+        0.,
+        None,
+        handle_triangle.clone(),
+        handle_purple,
+    ));
+    // commands.spawn(Boxoid::new(400., 200.));
+    // commands.spawn(Projectile::new(500., 200., None, None, Some(Color::RED)));
 
     // Ball
-    // commands.spawn((
-    //     MaterialMesh2dBundle {
-    //         mesh: meshes.add(Circle::default()).into(),
-    //         material: materials.add(BALL_COLOR),
-    //         transform: Transform::from_translation(BALL_START_POSITION)
-    //             .with_scale(Vec2::splat(BALL_RADIUS * 2.).extend(1.)),
-    //         ..default()
-    //     },
-    //     Ball,
-    //     Velocity(BALL_START_VELOCITY),
-    //     OnMatchView,
-    // ));
+    // commands.spawn((MaterialMesh2dBundle {
+    //     mesh: meshes.add(Triangle2d::default()).into(),
+    //     material: materials.add(Color::PURPLE),
+    //     transform: Transform::from_translation(Vec3::new(0., 0., 0.))
+    //         .with_scale(Vec2::splat(10.).extend(1.)),
+    //     ..default()
+    // },));
 
     // // Scores
     // // A
