@@ -104,14 +104,16 @@ pub struct OnMatchView;
 pub struct OnEndScreen;
 
 #[derive(Component)]
+pub struct PrimaryFire;
+
+#[derive(Component)]
 pub struct ProjectileEmitter {
     pub projectile_speed: Speed,
-    pub cooldown: i32,
+    pub cooldown_ms: i32,
     pub projectile_duration: Duration,
     pub damage: i32,
     pub is_friendly: bool,
     pub last_emission_time: Instant,
-    pub intends_to_fire: bool,
 }
 
 impl ProjectileEmitter {
@@ -123,12 +125,11 @@ impl ProjectileEmitter {
     ) -> Self {
         Self {
             projectile_speed,
-            cooldown,
+            cooldown_ms: cooldown,
             projectile_duration,
             damage,
             is_friendly: false,
             last_emission_time: Instant::now(),
-            intends_to_fire: true,
         }
     }
 }
@@ -136,13 +137,12 @@ impl ProjectileEmitter {
 impl Default for ProjectileEmitter {
     fn default() -> Self {
         Self {
-            projectile_speed: 300.,
-            cooldown: 100,
+            projectile_speed: INIT_SHIP_MOVE_SPEED + 200.,
+            cooldown_ms: 100,
             projectile_duration: Duration::from_secs(DEFAULT_DURATION_SECS),
             damage: DEFAULT_DAMAGE,
             is_friendly: false,
             last_emission_time: Instant::now(),
-            intends_to_fire: true,
         }
     }
 }

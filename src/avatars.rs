@@ -1,28 +1,29 @@
 use bevy::{
-    pbr::wireframe::Wireframe,
     prelude::*,
-    sprite::{Material2d, MaterialMesh2dBundle, Mesh2dHandle},
-    utils::{Duration, Instant},
+    sprite::{Material2d, MaterialMesh2dBundle},
+    utils::Duration,
 };
 use rand::Rng;
 
 use crate::{
     archetypes::gen_particle,
-    components::{BodyRotationRate, Collider, Damage, Health, MoveSpeed, Player, TransientExistence, TurnRate},
-    Speed, BOTTOM_WALL, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_ROTATION,
-    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    components::{
+        BodyRotationRate, Collider, Damage, Health, MoveSpeed, Player, ProjectileEmitter,
+        TransientExistence, TurnRate, Velocity,
+    },
+    Speed, BOTTOM_WALL, DEFAULT_HEADING, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
+    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE,
+    LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
 pub struct PlayerShip<M: Material2d> {
-    // sprite: SpriteBundle,
     mesh_bundle: MaterialMesh2dBundle<M>,
     move_speed: MoveSpeed,
     turn_rate: TurnRate,
     collider: Collider,
     health: Health,
     player: Player,
-    // ProjectileEmitterCpt,
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -81,11 +82,11 @@ impl<M: Material2d> Asteroid<M> {
         let body_rotation_rate = (rng.gen::<f32>() * 0.1) - 0.05;
         let move_speed = match move_speed {
             Some(x) => MoveSpeed(x),
-            None => MoveSpeed::default(),
+            None => MoveSpeed(INIT_ASTEROID_MOVE_SPEED),
         };
         let damage = match damage {
             Some(x) => Damage(x),
-            None => Damage::default(),
+            None => Damage(INIT_ASTEROID_DAMAGE),
         };
         Self {
             mesh_bundle: MaterialMesh2dBundle {
@@ -102,7 +103,7 @@ impl<M: Material2d> Asteroid<M> {
             move_speed,
             damage,
             collider: Collider,
-            health: Health::default(),
+            health: Health(INIT_ASTEROID_HEALTH),
             body_rotation_rate: BodyRotationRate(body_rotation_rate),
         }
     }
@@ -122,7 +123,7 @@ impl Boxoid {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
                     scale: Vec3::new(50., 50., 0.0),
-                    rotation: INIT_SHIP_ROTATION,
+                    rotation: *DEFAULT_HEADING,
                 },
                 sprite: Sprite {
                     color: Color::ORANGE_RED,
@@ -147,7 +148,7 @@ impl Default for Boxoid {
                         0.,
                     ),
                     scale: Vec3::new(50., 50., 0.0),
-                    rotation: INIT_SHIP_ROTATION,
+                    rotation: *DEFAULT_HEADING,
                 },
                 ..default()
             },
@@ -158,7 +159,7 @@ impl Default for Boxoid {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Heading(Vec3);
+pub struct Heading(pub Vec3);
 
 impl Heading {
     pub fn from_angle(angle_degrees: f32) -> Self {
@@ -171,7 +172,7 @@ impl Heading {
 
 impl Default for Heading {
     fn default() -> Self {
-        Heading(INIT_SHIP_ROTATION.xyz())
+        Heading(DEFAULT_HEADING.xyz())
     }
 }
 
@@ -179,6 +180,14 @@ impl Into<Quat> for Heading {
     fn into(self) -> Quat {
         let angle_radians = self.0.y.atan2(self.0.x);
         Quat::from_rotation_z(angle_radians)
+    }
+}
+
+impl From<Quat> for Heading {
+    fn from(quat: Quat) -> Self {
+        let direction = quat * Vec3::X;
+        let angle_radians = direction.y.atan2(direction.x);
+        Heading(Vec3::new(angle_radians.cos(), angle_radians.sin(), 0.))
     }
 }
 
@@ -211,7 +220,7 @@ impl Particle {
             sprite: SpriteBundle {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    rotation: INIT_SHIP_ROTATION,
+                    rotation: *DEFAULT_HEADING,
                     ..default()
                 },
                 sprite: Sprite {
@@ -236,7 +245,7 @@ impl Default for Particle {
                         BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
                         0.,
                     ),
-                    rotation: INIT_SHIP_ROTATION,
+                    rotation: *DEFAULT_HEADING,
                     ..default()
                 },
                 ..default()
@@ -254,6 +263,7 @@ pub struct Projectile {
     damage: Damage,
     move_speed: MoveSpeed,
     transient_existence: TransientExistence,
+    velocity: Velocity,
 }
 
 impl Projectile {
@@ -268,6 +278,8 @@ impl Projectile {
     ) -> Self {
         let particle = gen_particle(x, y, heading, move_speed, color);
         let sprite = particle.0;
+        let transform = sprite.transform;
+        let velocity = particle.2;
         let damage = match damage {
             Some(x) => Damage(x),
             None => Damage::default(),
@@ -286,6 +298,7 @@ impl Projectile {
             damage,
             transient_existence,
             move_speed,
+            velocity,
         }
     }
 }
@@ -294,13 +307,51 @@ impl Default for Projectile {
     fn default() -> Self {
         let particle = gen_particle(0., 0., None, None, None);
         let sprite = particle.0;
-        let stats = particle.1;
         Self {
             sprite,
             collider: Collider,
             damage: Damage::default(),
             transient_existence: TransientExistence::default(),
             move_speed: MoveSpeed::default(),
+            velocity: Velocity::default(),
+        }
+    }
+}
+
+#[derive(Bundle)]
+pub struct ProjectileEmitterBundle {
+    emitter: ProjectileEmitter,
+    transform: TransformBundle, // transform hierarchy via both Transform and GlobalTransform, so it can "attached" to a ship or other avatar
+                                // sprite: SpriteBundle,
+}
+
+// TODO spawn with transform aligned with parent entity
+// impl ProjectileEmitterBundle {
+//     pub fn new() -> Self {
+//         Self {
+
+//         }
+//     }
+// }
+
+impl Default for ProjectileEmitterBundle {
+    fn default() -> Self {
+        Self {
+            emitter: ProjectileEmitter::default(),
+            transform: TransformBundle::default(),
+            // sprite: SpriteBundle {
+            //     transform: Transform {
+            //         translation: Vec3::new(0., 0., 2.),
+            //         scale: Vec3::new(10., 10., 1.),
+            //         rotation: Heading::default().into(),
+            //         ..default()
+            //     },
+            //     sprite: Sprite {
+            //         color: Color::RED,
+            //         ..default()
+            //     },
+            //     ..default()
+            // },
         }
     }
 }

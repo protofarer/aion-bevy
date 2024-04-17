@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 
 use crate::{
-    avatars::Heading, components::MoveSpeed, Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED,
-    INIT_SHIP_ROTATION, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    avatars::Heading,
+    components::{MoveSpeed, Velocity},
+    Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
-pub type ArchParticle = (SpriteBundle, MoveSpeed);
+pub type ArchParticle = (SpriteBundle, MoveSpeed, Velocity);
 
 pub fn gen_particle(
     x: f32,
@@ -18,11 +19,13 @@ pub fn gen_particle(
         Some(x) => MoveSpeed(x),
         None => MoveSpeed::default(),
     };
+    let ms = move_speed.0;
+    let heading = heading.unwrap_or_default();
     (
         SpriteBundle {
             transform: Transform {
-                translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                rotation: heading.unwrap_or_default().into(),
+                translation: Vec3::new(x, y, 0.),
+                rotation: heading.into(),
                 ..default()
             },
             sprite: Sprite {
@@ -32,5 +35,6 @@ pub fn gen_particle(
             ..default()
         },
         move_speed,
+        Velocity(Vec2::new(ms * heading.0.x, ms * heading.0.y)),
     )
 }

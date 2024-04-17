@@ -1,18 +1,23 @@
 use core::time;
 
+use bevy::sprite::Material2d;
 use bevy::utils::{Duration, Instant};
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 use rand::Rng;
 
-use crate::components::{BodyRotationRate, MoveSpeed, Player, TurnRate, Velocity};
-use crate::DEFAULT_MOVESPEED;
+use crate::avatars::ProjectileEmitterBundle;
+use crate::components::{
+    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, ProjectileEmitter, TurnRate, Velocity,
+};
 use crate::{
     avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
     GameState, Speed, BOTTOM_WALL, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
-    INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_ROTATION, INIT_SHIP_TURN_RATE,
-    LARGE_ASTEROID_R, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_R, TOP_WALL,
+    INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_TURN_RATE, LARGE_ASTEROID_R,
+    LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_R, TOP_WALL,
 };
+use crate::{DEFAULT_HEADING, DEFAULT_MOVESPEED};
 
 pub fn play_plugin(app: &mut App) {
     app.add_systems(
@@ -21,6 +26,7 @@ pub fn play_plugin(app: &mut App) {
             apply_velocity,
             move_ship,
             apply_body_rotation,
+            system_ship_primary_fire,
             // check_for_collisions,
             // play_collision_sound,
             // process_score,
@@ -34,7 +40,8 @@ pub fn play_plugin(app: &mut App) {
         (
             bevy::window::close_on_esc,
             draw_boundary, // run_end.run_if(in_state(GameState::End)),
-                           // (update_score_ui, bevy::window::close_on_esc, run_match).in_set(MatchSet),
+            // (update_score_ui, bevy::window::close_on_esc, run_match).in_set(MatchSet),
+            draw_line,
         ),
     )
     .configure_sets(Update, (PlaySet.run_if(in_state(GameState::Match))))
@@ -67,18 +74,69 @@ pub fn setup_play(
 
     // Player Ships
     let handle_playership_mesh = meshes.add(Triangle2d::new(
-        Vec2::Y * 22.,
         Vec2::new(-15., -15.),
-        Vec2::new(15., -15.),
+        Vec2::X * 22.,
+        Vec2::new(-15., 15.),
     ));
     let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
-    commands.spawn(PlayerShip::new(
-        0.,
-        0.,
-        None,
-        handle_playership_mesh.clone(),
-        handle_playership_colormaterial,
-    ));
+
+    // Ship movement by Impulse / Force:
+    // apply force to dynamic rigidbody
+    // rigidbody has non-zero mass: attach collider (have non-zero density by default) or set mass/angular inertia explicitly
+    // if set mass on rigidbody, remember collider has its own mass added, consider zeroing collider mass
+    // force must be strong enough
+
+    // Ship affected by gravity (nearby massive object):
+    // gravity vector is non-zero
+    // dynamic rigidbody
+    // dont lock translations of rigidbody
+    // non-zero rigidbody mass
+
+    commands
+        .spawn((
+            MaterialMesh2dBundle {
+                mesh: handle_playership_mesh.into(),
+                material: handle_playership_colormaterial,
+                transform: Transform {
+                    translation: Vec3::new(0., 0., 1.),
+                    rotation: Heading::default().into(),
+                    ..default()
+                },
+                ..default()
+            },
+            Health(INIT_SHIP_HEALTH),
+            Player::A,
+            MoveSpeed(INIT_SHIP_MOVE_SPEED),
+            TurnRate(INIT_SHIP_TURN_RATE),
+        ))
+        .insert(Collider::triangle(
+            Vec2::new(-15., -15.),
+            Vec2::X * 22.,
+            Vec2::new(-15., 15.),
+        ))
+        .insert(Restitution::coefficient(0.7));
+
+    // commands
+    //     .spawn(PlayerShip::new(
+    //         0.,
+    //         0.,
+    //         None,
+    //         handle_playership_mesh.clone(),
+    //         handle_playership_colormaterial,
+    //     ))
+    //     .with_children(|parent| {
+    //         parent.spawn((ProjectileEmitterBundle::default(), PrimaryFire));
+    //     });
+
+    // commands.spawn(Projectile::new(
+    //     100.,
+    //     100.,
+    //     None,
+    //     None,
+    //     Some(Color::RED),
+    //     None,
+    //     None,
+    // ));
 
     // Asteroids
     let handle_asteroid_colormaterial = materials.add(Color::GRAY);
@@ -158,6 +216,17 @@ pub fn setup_play(
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 struct PlaySet;
 
+pub fn draw_line(mut painter: ShapePainter) {
+    let height = TOP_WALL - BOTTOM_WALL;
+    let width = RIGHT_WALL - LEFT_WALL;
+    let line_color = Color::ORANGE;
+
+    painter.thickness = 1.;
+    painter.color = line_color;
+
+    painter.line(Vec3::new(0., -100., 0.), Vec3::new(30., -100., 0.));
+}
+
 pub fn draw_boundary(mut painter: ShapePainter) {
     let height = TOP_WALL - BOTTOM_WALL;
     let width = RIGHT_WALL - LEFT_WALL;
@@ -218,7 +287,7 @@ pub fn move_ship(
         transform.rotate_z(rotation_sign * turnrate.0 * time.delta_seconds());
 
         // get fwd vector by applying current rot to ships init facing vec
-        let movement_direction = (transform.rotation * INIT_SHIP_ROTATION) * Vec3::X;
+        let movement_direction = (transform.rotation * *DEFAULT_HEADING) * Vec3::X;
         let movement_distance = thrust * movespeed.0 * time.delta_seconds();
         let translation_delta = movement_direction * movement_distance;
         transform.translation += translation_delta;
@@ -237,3 +306,51 @@ pub fn move_ship(
         }
     }
 }
+
+pub fn system_ship_primary_fire(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut q_ship: Query<(&Children), With<Player>>,
+    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmitter), With<PrimaryFire>>,
+    time: Res<Time>,
+) {
+    // when fire key pressed
+    if keyboard_input.pressed(KeyCode::Space) {
+        // find ship, get children projectile emitters
+        for (children) in &mut q_ship {
+            for child in children {
+                if let Ok((transform, mut emitter)) = q_emitter.get_mut(*child) {
+                    // spawn projectile
+                    let last_emit = emitter.last_emission_time;
+                    if last_emit.elapsed().as_millis() as i32 >= emitter.cooldown_ms {
+                        emitter.last_emission_time = Instant::now();
+                        // get and set projectile props
+                        let (_scale, rotation, translation) =
+                            transform.to_scale_rotation_translation();
+
+                        // TODO better way to tackle this? don't set a default heading/"offset"???
+                        let movement_direction = (rotation * *DEFAULT_HEADING) * Vec3::X;
+
+                        commands.spawn(Projectile::new(
+                            translation.x,
+                            translation.y,
+                            Some(Heading(movement_direction.into())),
+                            Some(emitter.projectile_speed),
+                            None,
+                            Some(emitter.damage),
+                            Some(emitter.projectile_duration),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+}
+
+// pub fn system_projectile_emission(
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     mut query: Query<(&mut Transform, &TurnRate, &MoveSpeed), With<Player>>,
+//     time: Res<Time>,
+// ) {
+
+// }
