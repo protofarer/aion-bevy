@@ -1,11 +1,14 @@
-use bevy::prelude::*;
-use bevy_rapier2d::prelude::*;
+use bevy::{prelude::*, sprite::Material2d};
+use bevy_rapier2d::{prelude::*, rapier::dynamics::RigidBodyVelocity};
+
+use crate::{avatars::PlayerShip, components::Player};
 
 pub fn physics_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
         .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(Startup, setup_physics)
-        .add_systems(Update, print_ball_altitude);
+        .add_systems(FixedUpdate, apply_thrust);
+    // .add_systems(Update, print_ball_altitude);
 }
 
 pub fn setup_physics(mut commands: Commands) {
@@ -37,9 +40,41 @@ pub fn setup_physics(mut commands: Commands) {
         .spawn(RigidBody::Dynamic)
         .insert(Collider::ball(10.))
         .insert(Velocity::linear(Vec2::new(0., -300.)))
+        .insert(ExternalForce {
+            force: Vec2::ZERO,
+            torque: 0.,
+        })
         .insert(Restitution::coefficient(0.7))
         .insert(TransformBundle::from(Transform::from_xyz(-300., 200., 0.)))
         .insert(GravityScale(1.));
+}
+
+pub fn apply_thrust(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut q_ship: Query<(Entity, &mut Velocity, &mut ExternalForce), With<Player>>,
+) {
+    let (id, mut vel, mut force) = q_ship.single_mut();
+    if keyboard_input.just_pressed(KeyCode::KeyS) {
+        commands.entity(id).insert(ExternalForce {
+            force: Vec2::new(10000., 0.),
+            torque: 0.,
+        });
+        info!("Added thrust force")
+    }
+    if keyboard_input.just_released(KeyCode::KeyS) {
+        // commands.entity(id).remove::<ExternalForce>();
+        // info!("Removed thrust force")
+        *force = ExternalForce {
+            force: Vec2::ZERO,
+            torque: 0.,
+        };
+        *vel = Velocity {
+            linvel: Vec2::ZERO,
+            angvel: 0.,
+        };
+    }
 }
 
 fn print_ball_altitude(positions: Query<&Transform, With<RigidBody>>) {

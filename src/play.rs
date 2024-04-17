@@ -3,13 +3,14 @@ use core::time;
 use bevy::sprite::Material2d;
 use bevy::utils::{Duration, Instant};
 use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
+use bevy_rapier2d::dynamics::Velocity;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 use rand::Rng;
 
 use crate::avatars::ProjectileEmitterBundle;
 use crate::components::{
-    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, ProjectileEmitter, TurnRate, Velocity,
+    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, ProjectileEmitter, TurnRate,
 };
 use crate::{
     avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
@@ -23,7 +24,7 @@ pub fn play_plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            apply_velocity,
+            // apply_velocity,
             move_ship,
             apply_body_rotation,
             system_ship_primary_fire,
@@ -109,12 +110,26 @@ pub fn setup_play(
             MoveSpeed(INIT_SHIP_MOVE_SPEED),
             TurnRate(INIT_SHIP_TURN_RATE),
         ))
+        .insert(RigidBody::Dynamic)
         .insert(Collider::triangle(
             Vec2::new(-15., -15.),
             Vec2::X * 22.,
             Vec2::new(-15., 15.),
         ))
-        .insert(Restitution::coefficient(0.7));
+        .insert(Restitution::coefficient(0.7))
+        .insert(ExternalForce {
+            force: Vec2::ZERO,
+            torque: 0.,
+        })
+        // .insert(ExternalImpulse {
+        //     impulse: Vec2::new(10000., 0.),
+        //     torque_impulse: 0.,
+        // })
+        .insert(Velocity {
+            linvel: Vec2::ZERO,
+            angvel: 0.,
+        })
+        .insert(GravityScale(0.));
 
     // commands
     //     .spawn(PlayerShip::new(
@@ -253,12 +268,12 @@ pub fn draw_boundary(mut painter: ShapePainter) {
     );
 }
 
-pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
-    for (mut transform, velocity) in &mut query {
-        transform.translation.x += velocity.x * time.delta_seconds();
-        transform.translation.y += velocity.y * time.delta_seconds();
-    }
-}
+// pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
+//     for (mut transform, velocity) in &mut query {
+//         transform.translation.x += velocity.x * time.delta_seconds();
+//         transform.translation.y += velocity.y * time.delta_seconds();
+//     }
+// }
 
 pub fn apply_body_rotation(mut query: Query<(&mut Transform, &BodyRotationRate)>, time: Res<Time>) {
     for (mut transform, brr) in &mut query {
@@ -271,26 +286,24 @@ pub fn move_ship(
     time: Res<Time>,
 ) {
     for (mut transform, turnrate, movespeed) in query.iter_mut() {
-        let mut thrust = 0.;
-        let mut rotation_sign = 0.;
+        // let mut thrust = 0.;
+        // if keyboard_input.pressed(KeyCode::KeyS) {
+        //     thrust += 1.;
+        // }
+        // get fwd vector by applying current rot to ships init facing vec
+        // let movement_direction = (transform.rotation * *DEFAULT_HEADING) * Vec3::X;
+        // let movement_distance = thrust * movespeed.0 * time.delta_seconds();
+        // let translation_delta = movement_direction * movement_distance;
+        // transform.translation += translation_delta;
 
-        if keyboard_input.pressed(KeyCode::KeyS) {
-            thrust += 1.;
-        }
+        let mut rotation_sign = 0.;
         if keyboard_input.pressed(KeyCode::KeyA) {
             rotation_sign += 1.;
         }
         if keyboard_input.pressed(KeyCode::KeyD) {
             rotation_sign -= 1.;
         }
-
         transform.rotate_z(rotation_sign * turnrate.0 * time.delta_seconds());
-
-        // get fwd vector by applying current rot to ships init facing vec
-        let movement_direction = (transform.rotation * *DEFAULT_HEADING) * Vec3::X;
-        let movement_distance = thrust * movespeed.0 * time.delta_seconds();
-        let translation_delta = movement_direction * movement_distance;
-        transform.translation += translation_delta;
 
         if (transform.translation.y >= TOP_WALL) {
             transform.translation.y = BOTTOM_WALL + (transform.translation.y - TOP_WALL);
