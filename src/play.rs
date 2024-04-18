@@ -10,7 +10,8 @@ use rand::Rng;
 
 use crate::avatars::ProjectileEmitterBundle;
 use crate::components::{
-    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, ProjectileEmitter, TurnRate,
+    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, PrimaryThrustMagnitude,
+    ProjectileEmitter, TurnRate,
 };
 use crate::{
     avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
@@ -93,6 +94,8 @@ pub fn setup_play(
     // dont lock translations of rigidbody
     // non-zero rigidbody mass
 
+    //TODO destructure playership bundle into 1st level tuple and children tuple
+
     commands
         .spawn((
             MaterialMesh2dBundle {
@@ -110,38 +113,26 @@ pub fn setup_play(
             MoveSpeed(INIT_SHIP_MOVE_SPEED),
             TurnRate(INIT_SHIP_TURN_RATE),
         ))
-        .insert(RigidBody::Dynamic)
         .insert(Collider::triangle(
             Vec2::new(-15., -15.),
             Vec2::X * 22.,
             Vec2::new(-15., 15.),
         ))
-        .insert(Restitution::coefficient(0.7))
-        .insert(ExternalForce {
-            force: Vec2::ZERO,
-            torque: 0.,
-        })
-        // .insert(ExternalImpulse {
-        //     impulse: Vec2::new(10000., 0.),
-        //     torque_impulse: 0.,
-        // })
+        .insert(RigidBody::Dynamic)
         .insert(Velocity {
             linvel: Vec2::ZERO,
             angvel: 0.,
         })
-        .insert(GravityScale(0.));
-
-    // commands
-    //     .spawn(PlayerShip::new(
-    //         0.,
-    //         0.,
-    //         None,
-    //         handle_playership_mesh.clone(),
-    //         handle_playership_colormaterial,
-    //     ))
-    //     .with_children(|parent| {
-    //         parent.spawn((ProjectileEmitterBundle::default(), PrimaryFire));
-    //     });
+        .insert(ExternalForce {
+            force: Vec2::ZERO,
+            torque: 0.,
+        })
+        .insert(Restitution::coefficient(0.7))
+        .insert(GravityScale(0.))
+        .insert(PrimaryThrustMagnitude(10000.))
+        .with_children(|parent| {
+            parent.spawn((ProjectileEmitterBundle::default(), PrimaryFire));
+        });
 
     // commands.spawn(Projectile::new(
     //     100.,
@@ -352,6 +343,8 @@ pub fn system_ship_primary_fire(
                             None,
                             Some(emitter.damage),
                             Some(emitter.projectile_duration),
+                            None,
+                            None,
                         ));
                     }
                 }

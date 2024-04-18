@@ -3,17 +3,18 @@ use bevy::{
     sprite::{Material2d, MaterialMesh2dBundle},
     utils::Duration,
 };
+use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
     archetypes::gen_particle,
     components::{
-        BodyRotationRate, Collider, Damage, Health, MoveSpeed, Player, ProjectileEmitter,
-        TransientExistence, TurnRate, Velocity,
+        BodyRotationRate, Damage, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
+        ProjectileEmitter, TransientExistence, TurnRate,
     },
-    Speed, BOTTOM_WALL, DEFAULT_HEADING, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
-    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE,
-    LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, INIT_ASTEROID_DAMAGE,
+    INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED,
+    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -24,6 +25,13 @@ pub struct PlayerShip<M: Material2d> {
     collider: Collider,
     health: Health,
     player: Player,
+    rigidbody: RigidBody,
+    velocity: Velocity,
+    primary_thrust_force: ExternalForce,
+    primary_thrust_magnitude: PrimaryThrustMagnitude,
+    restitution: Restitution,
+    gravity: GravityScale,
+    children: (ProjectileEmitter),
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -47,11 +55,28 @@ impl<M: Material2d> PlayerShip<M> {
                 //     .with_scale(Vec2::splat(50.).extend(1.)),
                 ..default()
             },
-            collider: Collider,
+            collider: Collider::triangle(
+                Vec2::new(-15., -15.),
+                Vec2::X * 22.,
+                Vec2::new(-15., 15.),
+            ),
             health: Health(INIT_SHIP_HEALTH),
             player: Player::A,
             move_speed: MoveSpeed(INIT_SHIP_MOVE_SPEED),
             turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
+            rigidbody: RigidBody::Dynamic,
+            velocity: Velocity {
+                linvel: Vec2::ZERO,
+                angvel: 0.,
+            },
+            primary_thrust_force: ExternalForce {
+                force: Vec2::ZERO,
+                torque: 0.,
+            },
+            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
+            restitution: Restitution::coefficient(0.7),
+            gravity: GravityScale(0.),
+            children: ProjectileEmitter::default(),
         }
     }
 }
@@ -102,7 +127,7 @@ impl<M: Material2d> Asteroid<M> {
             },
             move_speed,
             damage,
-            collider: Collider,
+            collider: Collider::ball(r),
             health: Health(INIT_ASTEROID_HEALTH),
             body_rotation_rate: BodyRotationRate(body_rotation_rate),
         }
@@ -117,12 +142,12 @@ pub struct Boxoid {
 }
 
 impl Boxoid {
-    pub fn new(x: f32, y: f32) -> Self {
+    pub fn new(x: f32, y: f32, half_x: f32, half_y: f32) -> Self {
         Self {
             sprite: SpriteBundle {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    scale: Vec3::new(50., 50., 0.0),
+                    scale: Vec3::new(half_x * 2., half_y * 2., 0.0),
                     rotation: *DEFAULT_HEADING,
                 },
                 sprite: Sprite {
@@ -131,7 +156,7 @@ impl Boxoid {
                 },
                 ..default()
             },
-            collider: Collider,
+            collider: Collider::cuboid(half_x, half_y),
             health: Health(1),
         }
     }
@@ -152,7 +177,7 @@ impl Default for Boxoid {
                 },
                 ..default()
             },
-            collider: Collider,
+            collider: Collider::cuboid(25., 25.),
             health: Health(1),
         }
     }
@@ -259,11 +284,13 @@ impl Default for Particle {
 #[derive(Bundle)]
 pub struct Projectile {
     sprite: SpriteBundle,
-    collider: Collider,
     damage: Damage,
-    move_speed: MoveSpeed,
     transient_existence: TransientExistence,
+    rigidbody: RigidBody,
+    collider: Collider,
     velocity: Velocity,
+    restitution: Restitution,
+    gravity: GravityScale,
 }
 
 impl Projectile {
@@ -275,11 +302,13 @@ impl Projectile {
         color: Option<Color>,
         damage: Option<i32>,
         duration: Option<Duration>,
+        restitution_coeff: Option<f32>,
+        gravity_scale: Option<f32>,
     ) -> Self {
         let particle = gen_particle(x, y, heading, move_speed, color);
         let sprite = particle.0;
         let transform = sprite.transform;
-        let velocity = particle.2;
+        let velocity = particle.1;
         let damage = match damage {
             Some(x) => Damage(x),
             None => Damage::default(),
@@ -292,13 +321,23 @@ impl Projectile {
             Some(x) => MoveSpeed(x),
             None => MoveSpeed::default(),
         };
+        let restitution = match restitution_coeff {
+            Some(x) => Restitution::coefficient(x),
+            None => Restitution::coefficient(DEFAULT_RESTITUTION),
+        };
+        let gravity = match gravity_scale {
+            Some(x) => GravityScale(x),
+            None => GravityScale(0.),
+        };
         Self {
             sprite,
-            collider: Collider,
+            rigidbody: RigidBody::Dynamic,
+            collider: Collider::ball(0.5),
             damage,
             transient_existence,
-            move_speed,
             velocity,
+            restitution,
+            gravity,
         }
     }
 }
@@ -307,13 +346,16 @@ impl Default for Projectile {
     fn default() -> Self {
         let particle = gen_particle(0., 0., None, None, None);
         let sprite = particle.0;
+        let velocity = particle.1;
         Self {
             sprite,
-            collider: Collider,
             damage: Damage::default(),
             transient_existence: TransientExistence::default(),
-            move_speed: MoveSpeed::default(),
-            velocity: Velocity::default(),
+            rigidbody: RigidBody::Dynamic,
+            collider: Collider::ball(1.),
+            velocity,
+            restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
+            gravity: GravityScale(0.),
         }
     }
 }

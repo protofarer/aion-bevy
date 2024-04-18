@@ -1,7 +1,10 @@
 use bevy::{prelude::*, sprite::Material2d};
 use bevy_rapier2d::{prelude::*, rapier::dynamics::RigidBodyVelocity};
 
-use crate::{avatars::PlayerShip, components::Player};
+use crate::{
+    avatars::{Heading, PlayerShip},
+    components::{Player, PrimaryThrustMagnitude},
+};
 
 pub fn physics_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
@@ -53,27 +56,48 @@ pub fn apply_thrust(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
-    mut q_ship: Query<(Entity, &mut Velocity, &mut ExternalForce), With<Player>>,
+    mut q_ship: Query<
+        (
+            Entity,
+            // &mut Velocity,
+            &mut ExternalForce,
+            &Transform,
+            &PrimaryThrustMagnitude,
+        ),
+        With<Player>,
+    >,
 ) {
-    let (id, mut vel, mut force) = q_ship.single_mut();
-    if keyboard_input.just_pressed(KeyCode::KeyS) {
-        commands.entity(id).insert(ExternalForce {
-            force: Vec2::new(10000., 0.),
-            torque: 0.,
-        });
-        info!("Added thrust force")
+    let (
+        id,
+        // mut vel,
+        mut primary_thrust_force,
+        transform,
+        primary_thrust_magnitude,
+    ) = q_ship.single_mut();
+
+    if keyboard_input.pressed(KeyCode::KeyS) {
+        info!("Added thrust force");
+        let heading: Heading = transform.rotation.into();
+        primary_thrust_force.force =
+            Vec2::new(heading.0.x, heading.0.y) * primary_thrust_magnitude.0;
+        // force: Vec2::new(100000., 0.),
+        //     torque: 0.,
+        // };
+        // commands.entity(id).insert(ExternalForce {
+        //     force: Vec2::new(10000., 0.),
+        //     torque: 0.,
+        // });
     }
     if keyboard_input.just_released(KeyCode::KeyS) {
-        // commands.entity(id).remove::<ExternalForce>();
-        // info!("Removed thrust force")
-        *force = ExternalForce {
+        info!("Removed thrust force");
+        *primary_thrust_force = ExternalForce {
             force: Vec2::ZERO,
             torque: 0.,
         };
-        *vel = Velocity {
-            linvel: Vec2::ZERO,
-            angvel: 0.,
-        };
+        // *vel = Velocity {
+        //     linvel: Vec2::ZERO,
+        //     angvel: 0.,
+        // };
     }
 }
 

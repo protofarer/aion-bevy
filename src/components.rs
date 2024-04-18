@@ -3,8 +3,9 @@ use bevy::utils::{Duration, Instant};
 
 use crate::{
     Speed, TurnSpeed, DEFAULT_BODY_ROTATION_RATE, DEFAULT_DAMAGE, DEFAULT_DURATION_SECS,
-    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_TURNRATE, DEFAULT_VELOCITY,
-    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE,
+    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_THRUST_FORCE_MAGNITUDE, DEFAULT_TURNRATE,
+    DEFAULT_VELOCITY, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED,
+    INIT_SHIP_TURN_RATE,
 };
 
 #[derive(Component)]
@@ -82,15 +83,6 @@ impl Default for MoveSpeed {
     }
 }
 
-#[derive(Component, Deref, DerefMut, Debug)]
-pub struct Velocity(pub Vec2);
-
-impl Default for Velocity {
-    fn default() -> Self {
-        Self(DEFAULT_VELOCITY)
-    }
-}
-
 #[derive(Component)]
 pub struct Collider;
 
@@ -105,6 +97,15 @@ pub struct OnEndScreen;
 
 #[derive(Component)]
 pub struct PrimaryFire;
+
+#[derive(Component)]
+pub struct PrimaryThrustMagnitude(pub f32);
+
+impl Default for PrimaryThrustMagnitude {
+    fn default() -> Self {
+        Self(DEFAULT_THRUST_FORCE_MAGNITUDE)
+    }
+}
 
 #[derive(Component)]
 pub struct ProjectileEmitter {

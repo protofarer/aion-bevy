@@ -1,12 +1,12 @@
 use bevy::prelude::*;
+use bevy_rapier2d::{dynamics::Velocity, parry::simba::scalar::SupersetOf};
 
 use crate::{
-    avatars::Heading,
-    components::{MoveSpeed, Velocity},
-    Speed, BOTTOM_WALL, INIT_SHIP_MOVE_SPEED, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    avatars::Heading, components::MoveSpeed, Speed, BOTTOM_WALL, DEFAULT_MOVESPEED,
+    INIT_SHIP_MOVE_SPEED, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
-pub type ArchParticle = (SpriteBundle, MoveSpeed, Velocity);
+pub type ArchParticle = (SpriteBundle, Velocity);
 
 pub fn gen_particle(
     x: f32,
@@ -16,10 +16,9 @@ pub fn gen_particle(
     color: Option<Color>,
 ) -> ArchParticle {
     let move_speed = match move_speed {
-        Some(x) => MoveSpeed(x),
-        None => MoveSpeed::default(),
+        Some(x) => x,
+        None => DEFAULT_MOVESPEED,
     };
-    let ms = move_speed.0;
     let heading = heading.unwrap_or_default();
     (
         SpriteBundle {
@@ -34,7 +33,9 @@ pub fn gen_particle(
             },
             ..default()
         },
-        move_speed,
-        Velocity(Vec2::new(ms * heading.0.x, ms * heading.0.y)),
+        Velocity {
+            linvel: Vec2::new(heading.0.x, heading.0.y) * move_speed,
+            angvel: 0.,
+        },
     )
 }
