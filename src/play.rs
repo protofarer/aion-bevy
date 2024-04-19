@@ -8,7 +8,7 @@ use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 use rand::Rng;
 
-use crate::avatars::ProjectileEmitterBundle;
+use crate::avatars::{ProjectileEmitterBundle, Thruster};
 use crate::components::{
     BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, PrimaryThrustMagnitude,
     ProjectileEmitter, TurnRate,
@@ -19,7 +19,10 @@ use crate::{
     INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_TURN_RATE, LARGE_ASTEROID_R,
     LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_R, TOP_WALL,
 };
-use crate::{DEFAULT_HEADING, DEFAULT_MOVESPEED};
+use crate::{
+    AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_HEADING,
+    DEFAULT_MOVESPEED,
+};
 
 pub fn play_plugin(app: &mut App) {
     app.add_systems(
@@ -123,15 +126,20 @@ pub fn setup_play(
             linvel: Vec2::ZERO,
             angvel: 0.,
         })
+        // .insert(PrimaryThrustMagnitude(10000.))
         .insert(ExternalForce {
             force: Vec2::ZERO,
             torque: 0.,
         })
         .insert(Restitution::coefficient(0.7))
         .insert(GravityScale(0.))
-        .insert(PrimaryThrustMagnitude(10000.))
+        .insert(Damping {
+            linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+            angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+        })
         .with_children(|parent| {
             parent.spawn((ProjectileEmitterBundle::default(), PrimaryFire));
+            parent.spawn(Thruster::default());
         });
 
     // commands.spawn(Projectile::new(

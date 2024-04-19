@@ -2,7 +2,7 @@ use bevy::{prelude::*, sprite::Material2d};
 use bevy_rapier2d::{prelude::*, rapier::dynamics::RigidBodyVelocity};
 
 use crate::{
-    avatars::{Heading, PlayerShip},
+    avatars::{Heading, PlayerShip, Thruster},
     components::{Player, PrimaryThrustMagnitude},
 };
 
@@ -10,7 +10,7 @@ pub fn physics_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
         .add_plugins(RapierDebugRenderPlugin::default())
         .add_systems(Startup, setup_physics)
-        .add_systems(FixedUpdate, apply_thrust);
+        .add_systems(FixedUpdate, (apply_forces_ship));
     // .add_systems(Update, print_ball_altitude);
 }
 
@@ -52,52 +52,69 @@ pub fn setup_physics(mut commands: Commands) {
         .insert(GravityScale(1.));
 }
 
-pub fn apply_thrust(
+// * for single thruster, single ship, not flexible
+// pub fn apply_thrust(
+//     mut commands: Commands,
+//     keyboard_input: Res<ButtonInput<KeyCode>>,
+//     mut q_ship: Query<
+//         (
+//             Entity,
+//             // &mut Velocity,
+//             &mut ExternalForce,
+//             &Transform,
+//             &PrimaryThrustMagnitude,
+//         ),
+//         With<Player>,
+//     >,
+// ) {
+//     let (
+//         id,
+//         // mut vel,
+//         mut primary_thrust_force,
+//         transform,
+//         primary_thrust_magnitude,
+//     ) = q_ship.single_mut();
+
+//     if keyboard_input.pressed(KeyCode::KeyS) {
+//         info!("Added thrust force");
+//         let heading: Heading = transform.rotation.into();
+//         primary_thrust_force.force =
+//             Vec2::new(heading.0.x, heading.0.y) * primary_thrust_magnitude.0;
+//     }
+//     if keyboard_input.just_released(KeyCode::KeyS) {
+//         info!("Removed thrust force");
+//         *primary_thrust_force = ExternalForce {
+//             force: Vec2::ZERO,
+//             torque: 0.,
+//         };
+//         // *vel = Velocity {
+//         //     linvel: Vec2::ZERO,
+//         //     angvel: 0.,
+//         // };
+//     }
+// }
+
+pub fn apply_forces_ship(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    time: Res<Time>,
-    mut q_ship: Query<
-        (
-            Entity,
-            // &mut Velocity,
-            &mut ExternalForce,
-            &Transform,
-            &PrimaryThrustMagnitude,
-        ),
-        With<Player>,
-    >,
+    mut q_ship: Query<(&Children, &mut ExternalForce, &Transform, &mut Velocity), With<Player>>,
+    mut q_thruster: Query<(&Thruster)>,
 ) {
-    let (
-        id,
-        // mut vel,
-        mut primary_thrust_force,
-        transform,
-        primary_thrust_magnitude,
-    ) = q_ship.single_mut();
+    let (children, mut ext_force, transform, mut velocity) = q_ship.single_mut();
+
+    // clear all external forces and torques on ship
+    *ext_force = ExternalForce::default();
 
     if keyboard_input.pressed(KeyCode::KeyS) {
-        info!("Added thrust force");
+        let mut sum_forces: f32 = 0.;
+        for child in children {
+            if let Ok((thruster)) = q_thruster.get_mut(*child) {
+                sum_forces += thruster.0;
+            }
+        }
         let heading: Heading = transform.rotation.into();
-        primary_thrust_force.force =
-            Vec2::new(heading.0.x, heading.0.y) * primary_thrust_magnitude.0;
-        // force: Vec2::new(100000., 0.),
-        //     torque: 0.,
-        // };
-        // commands.entity(id).insert(ExternalForce {
-        //     force: Vec2::new(10000., 0.),
-        //     torque: 0.,
-        // });
-    }
-    if keyboard_input.just_released(KeyCode::KeyS) {
-        info!("Removed thrust force");
-        *primary_thrust_force = ExternalForce {
-            force: Vec2::ZERO,
-            torque: 0.,
-        };
-        // *vel = Velocity {
-        //     linvel: Vec2::ZERO,
-        //     angvel: 0.,
-        // };
+        ext_force.force.x += heading.0.x * sum_forces;
+        ext_force.force.y += heading.0.y * sum_forces;
     }
 }
 

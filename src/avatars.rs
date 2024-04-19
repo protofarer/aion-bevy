@@ -12,9 +12,9 @@ use crate::{
         BodyRotationRate, Damage, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
         ProjectileEmitter, TransientExistence, TurnRate,
     },
-    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, INIT_ASTEROID_DAMAGE,
-    INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED,
-    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_THRUST_FORCE_MAGNITUDE,
+    INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
+    INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -395,5 +395,16 @@ impl Default for ProjectileEmitterBundle {
             //     ..default()
             // },
         }
+    }
+}
+
+// thrusters apply only linear force onto rigidbody (conventionally onto center of mass)
+// used as a child, so that there can be many thrusters for 1 parent entity
+#[derive(Component)]
+pub struct Thruster(pub f32);
+
+impl Default for Thruster {
+    fn default() -> Self {
+        Self(DEFAULT_THRUST_FORCE_MAGNITUDE)
     }
 }

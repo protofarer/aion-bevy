@@ -21,6 +21,8 @@ pub type Speed = f32;
 pub type TurnSpeed = f32;
 
 // CONSTANTS
+const AMBIENT_LINEAR_FRICTION_COEFFICIENT: f32 = 0.6;
+const AMBIENT_ANGULAR_FRICTION_COEFFICIENT: f32 = 1.0;
 const BACKGROUND_COLOR: Color = Color::rgb(0., 0., 0.);
 
 // play area dims assuming 1920x1080 window with 20% saved for debug and UI
@@ -42,7 +44,7 @@ const DEFAULT_DAMAGE: i32 = 1;
 const DEFAULT_DURATION_SECS: u64 = 5;
 const DEFAULT_VELOCITY: Vec2 = Vec2::new(100., 0.);
 const DEFAULT_RESTITUTION: f32 = 0.5;
-const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 10000.;
+const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
 
 // Ship
 const INIT_SHIP_MOVE_SPEED: Speed = 300.;
