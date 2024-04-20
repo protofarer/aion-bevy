@@ -1,27 +1,19 @@
-use core::time;
 use std::f32::consts::PI;
 
-use bevy::sprite::Material2d;
-use bevy::utils::{Duration, Instant};
-use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
-use bevy_rapier2d::dynamics::Velocity;
+use bevy::prelude::*;
+use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
-use rand::Rng;
 
-use crate::avatars::{ProjectileEmitterBundle, Thruster};
 use crate::components::{
-    BodyRotationRate, FireType, FireTypes, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
-    ProjectileEmission, Score, ScoreboardUi, TurnRate,
+    BackgroundMusic, FireType, FireTypes, Player, ProjectileEmission, ProjectileTag, Score,
+    ScoreboardUi, TurnRate,
 };
 use crate::{
-    avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
-    GameState, Speed, BOTTOM_WALL, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
-    INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_MOVE_SPEED, INIT_SHIP_TURN_RATE, LARGE_ASTEROID_R,
-    LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_R, TOP_WALL,
+    avatars::{Asteroid, Heading, PlayerShip, Projectile},
+    GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
 };
 use crate::{
-    AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_MOVESPEED,
     DEFAULT_ROTATION, LABEL_COLOR, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR,
 };
 
@@ -38,7 +30,6 @@ pub fn play_plugin(app: &mut App) {
             .chain()
             .in_set(PlaySet),
     )
-    .add_systems(Startup, setup_play)
     .add_systems(
         Update,
         (
@@ -48,8 +39,8 @@ pub fn play_plugin(app: &mut App) {
             update_scoreboard,
         ),
     )
-    .configure_sets(Update, (PlaySet.run_if(in_state(GameState::Match))))
-    .configure_sets(FixedUpdate, (PlaySet.run_if(in_state(GameState::Match))))
+    .configure_sets(Update, PlaySet.run_if(in_state(GameState::Match)))
+    .configure_sets(FixedUpdate, PlaySet.run_if(in_state(GameState::Match)))
     .insert_resource(Score(0));
 }
 
@@ -57,28 +48,14 @@ pub fn setup_play(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    // bg_music: Res<BackgroundMusic>,
 ) {
-    info!("IN setup_match");
-
-    // Player Ships
     let handle_playership_mesh = meshes.add(Triangle2d::new(
         Vec2::new(-15., -15.),
         Vec2::X * 22.,
         Vec2::new(-15., 15.),
     ));
     let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
-
-    // Ship movement by Impulse / Force:
-    // apply force to dynamic rigidbody
-    // rigidbody has non-zero mass: attach collider (have non-zero density by default) or set mass/angular inertia explicitly
-    // if set mass on rigidbody, remember collider has its own mass added, consider zeroing collider mass
-    // force must be strong enough
-
-    // Ship affected by gravity (nearby massive object):
-    // gravity vector is non-zero
-    // dynamic rigidbody
-    // dont lock translations of rigidbody
-    // non-zero rigidbody mass
 
     let (ship, children) = PlayerShip::new(
         0.,
@@ -122,16 +99,16 @@ pub fn setup_play(
         None,
     ));
 
-    commands.spawn(Asteroid::new(
-        200.,
-        -50.,
-        MEDIUM_ASTEROID_R,
-        handle_polygon.clone(),
-        handle_asteroid_colormaterial.clone(),
-        Some(Heading::from_angle(-PI / 2.)),
-        Some(500.),
-        None,
-    ));
+    // commands.spawn(Asteroid::new(
+    //     200.,
+    //     -50.,
+    //     MEDIUM_ASTEROID_R,
+    //     handle_polygon.clone(),
+    //     handle_asteroid_colormaterial.clone(),
+    //     Some(Heading::from_angle(-PI / 2.)),
+    //     Some(500.),
+    //     None,
+    // ));
 
     commands.spawn((
         ScoreboardUi,
@@ -163,8 +140,6 @@ pub fn setup_play(
 struct PlaySet;
 
 pub fn draw_line(mut painter: ShapePainter) {
-    let height = TOP_WALL - BOTTOM_WALL;
-    let width = RIGHT_WALL - LEFT_WALL;
     let line_color = Color::ORANGE;
 
     painter.thickness = 1.;
@@ -201,10 +176,10 @@ pub fn draw_boundary(mut painter: ShapePainter) {
 
 pub fn move_ship(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &TurnRate, &MoveSpeed), With<Player>>,
+    mut query: Query<(&mut Transform, &TurnRate), With<Player>>,
     time: Res<Time>,
 ) {
-    for (mut transform, turnrate, movespeed) in query.iter_mut() {
+    for (mut transform, turnrate) in query.iter_mut() {
         // let mut thrust = 0.;
         // if keyboard_input.pressed(KeyCode::KeyS) {
         //     thrust += 1.;
@@ -227,17 +202,17 @@ pub fn move_ship(
 }
 
 pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
-    for (mut transform) in query.iter_mut() {
-        if (transform.translation.y >= TOP_WALL) {
+    for mut transform in query.iter_mut() {
+        if transform.translation.y >= TOP_WALL {
             transform.translation.y = BOTTOM_WALL + (transform.translation.y - TOP_WALL);
         }
-        if (transform.translation.y <= BOTTOM_WALL) {
+        if transform.translation.y <= BOTTOM_WALL {
             transform.translation.y = TOP_WALL - (BOTTOM_WALL - transform.translation.y);
         }
-        if (transform.translation.x >= RIGHT_WALL) {
+        if transform.translation.x >= RIGHT_WALL {
             transform.translation.x = LEFT_WALL + (transform.translation.x - RIGHT_WALL);
         }
-        if (transform.translation.x <= LEFT_WALL) {
+        if transform.translation.x <= LEFT_WALL {
             transform.translation.x = RIGHT_WALL - (LEFT_WALL - transform.translation.x);
         }
     }
@@ -246,39 +221,44 @@ pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
 pub fn ship_fire(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<(&Children), With<Player>>,
+    mut q_ship: Query<&Children, With<Player>>,
     mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
-    time: Res<Time>,
 ) {
     // when fire key pressed
     if keyboard_input.pressed(KeyCode::Space) {
         // find ship, get children projectile emitters
-        for (children) in &mut q_ship {
+        for children in &mut q_ship {
             for child in children {
-                if let Ok((transform, mut emitter, firetype)) = q_emitter.get_mut(*child) {
+                if let Ok((global_transform, mut emitter, firetype)) = q_emitter.get_mut(*child) {
                     // spawn primary fire projectile
                     match firetype.fire_type {
                         FireTypes::Primary => {
                             let last_emit = emitter.last_emission_time;
+
                             if last_emit.elapsed().as_millis() as i32 >= emitter.cooldown_ms {
                                 emitter.last_emission_time = Instant::now();
-                                // get and set projectile props
+
                                 let (_scale, rotation, translation) =
-                                    transform.to_scale_rotation_translation();
+                                    global_transform.to_scale_rotation_translation();
 
                                 // TODO better way to tackle this? don't set a default heading/"offset"???
-                                let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
+                                let dir: Heading = rotation.into();
+                                // let z_rot = dir.0.z;
+                                // let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
 
+                                info!("emitter global x:{:?} y:{:?}", translation.x, translation.y);
                                 commands.spawn(Projectile::new(
                                     translation.x,
                                     translation.y,
-                                    Some(Heading(movement_direction.into())),
+                                    // Some(Heading(movement_direction.into())),
+                                    Some(dir),
                                     Some(emitter.projectile_speed),
                                     None,
                                     Some(emitter.damage),
                                     Some(emitter.projectile_duration),
                                     None,
                                     None,
+                                    ProjectileTag,
                                 ));
                             }
                         }

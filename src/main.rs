@@ -1,14 +1,13 @@
 #![allow(unused)]
 
 use avatars::Heading;
+use components::{BackgroundMusic, ProjectileEmitSound};
 use lazy_static::lazy_static;
-use std::f32::consts::PI;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
-use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::Shape2dPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
-use systems::setup;
+use play::setup_play;
 
 mod archetypes;
 mod avatars;
@@ -35,15 +34,14 @@ const TOP_WALL: f32 = 432.;
 // General
 const DEFAULT_MOVESPEED: Speed = 100.;
 const DEFAULT_HEALTH: i32 = 1;
+const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 300;
 lazy_static! {
-    static ref DEFAULT_HEADING: Heading = Heading::from_angle(0.);
+    static ref DEFAULT_HEADING: Heading = Heading(0.);
     static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(0.);
 }
-const DEFAULT_BODY_ROTATION_RATE: f32 = 0.;
 const DEFAULT_TURNRATE: f32 = 10.;
 const DEFAULT_DAMAGE: i32 = 1;
 const DEFAULT_DURATION_SECS: u64 = 5;
-const DEFAULT_VELOCITY: Vec2 = Vec2::new(100., 0.);
 const DEFAULT_RESTITUTION: f32 = 0.5;
 const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
 
@@ -57,7 +55,7 @@ const SCORE_COLOR: Color = Color::LIME_GREEN;
 const INIT_SHIP_MOVE_SPEED: Speed = 300.;
 const INIT_SHIP_TURN_RATE: TurnSpeed = 5.;
 const INIT_SHIP_HEALTH: i32 = 3;
-const INIT_SHIP_PROJECTILE_MOVE_SPEED: f32 = 500.;
+const INIT_SHIP_PROJECTILE_SPEED: f32 = 500.;
 
 // Asteroid
 const INIT_ASTEROID_MOVE_SPEED: Speed = 300.;
@@ -79,13 +77,49 @@ fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(Shape2dPlugin::default())
-        .add_plugins(play::play_plugin)
-        .add_plugins(physics::physics_plugin)
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .init_state::<GameState>()
-        .add_systems(Startup, (setup, setup_fps_counter))
+        .add_systems(Startup, (setup, setup_play, setup_fps_counter).chain()) // setup_play here while no scenes impl'd
         .add_systems(Update, (fps_text_update_system, fps_counter_showhide))
+        .add_plugins(play::play_plugin)
+        .add_plugins(physics::physics_plugin)
         .run();
+}
+
+pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(Camera2dBundle::default());
+
+    // let background_music = asset_server.load("sounds/Windless Slopes.ogg");
+    // commands.insert_resource(BackgroundMusic(background_music));
+
+    let light_shot_sound = asset_server.load("sounds/light_shot.wav");
+    commands.insert_resource(ProjectileEmitSound(light_shot_sound));
+
+    // commands.insert_resource(ProjectileEmitSound());
+    // commands.insert_resource(ShipThrustSound());
+    // commands.insert_resource(ProjectileImpactSound());
+    // commands.insert_resource(AsteroidDamagedSound());
+    // commands.insert_resource(AsteroidDestroyedSound());
+    // commands.insert_resource(AsteroidImpactSound());
+    // commands.insert_resource(ShipDamagedSound());
+    // commands.insert_resource(ShipImpactSound());
+
+    // let wall_collision_sound = asset_server.load("sounds/breakout_collision.ogg");
+    // let paddle_collision_sound = asset_server.load("sounds/med_shoot.wav");
+    // let goal_collision_sound = asset_server.load("sounds/jump.wav");
+    // commands.insert_resource(CollisionSound {
+    //     wall: wall_collision_sound,
+    //     paddle: paddle_collision_sound,
+    //     goal: goal_collision_sound,
+    // });
+    // commands.insert_resource(Scores { a: 0, b: 0 });
+    // commands.insert_resource(MatchInfo {
+    //     round_count: 0,
+    //     rounds_total: ROUNDS_TOTAL,
+    // });
+    // commands.insert_resource(RoundData {
+    //     paddle_hit_count: 0,
+    // });
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]

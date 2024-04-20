@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{
     prelude::*,
     sprite::{Material2d, MaterialMesh2dBundle},
@@ -7,15 +9,15 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
-    archetypes::gen_particle,
     components::{
-        BodyRotationRate, Damage, FireType, FireTypes, Health, MoveSpeed, Player,
-        PrimaryThrustMagnitude, ProjectileEmission, TransientExistence, TurnRate,
+        Damage, FireType, FireTypes, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
+        ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
     },
     Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE,
-    INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
-    INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
+    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
+    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED,
+    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -117,14 +119,14 @@ impl<M: Material2d> Asteroid<M> {
         mesh: Handle<Mesh>,
         material: Handle<M>,
         heading: Option<Heading>,
-        move_speed: Option<Speed>,
+        speed: Option<Speed>,
         damage: Option<i32>,
     ) -> Self {
         let mut rng = rand::thread_rng();
-        let body_rotation_rate = (rng.gen::<f32>() * 0.1) - 0.05;
-        let move_speed = match move_speed {
-            Some(x) => MoveSpeed(x),
-            None => MoveSpeed(INIT_ASTEROID_MOVE_SPEED),
+        let angvel = (rng.gen::<f32>() * 0.1) - 0.05;
+        let speed = match speed {
+            Some(x) => x,
+            None => INIT_ASTEROID_MOVE_SPEED,
         };
         let damage = match damage {
             Some(x) => Damage(x),
@@ -148,8 +150,8 @@ impl<M: Material2d> Asteroid<M> {
             },
             rigidbody: RigidBody::Dynamic,
             velocity: Velocity {
-                linvel: Vec2::new(heading.0.x, heading.0.y) * move_speed.0,
-                ..default()
+                linvel: heading.linvel(speed),
+                angvel,
             },
             damage,
 
@@ -211,17 +213,17 @@ impl Default for Boxoid {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Heading(pub Vec3);
+pub struct Heading(pub f32); // degrees
 
 impl Heading {
-    pub fn from_angle(angle_degrees: f32) -> Self {
-        let angle_radians = angle_degrees.to_radians();
+    pub fn to_vec3(&self) -> Vec3 {
+        let angle_radians = self.0.to_radians();
         let x = angle_radians.cos();
         let y = angle_radians.sin();
-        Heading(Vec3::new(x, y, 0.))
+        Vec3::new(x, y, 0.)
     }
-    pub fn linvel(angle_degrees: f32, speed: Speed) -> Vec2 {
-        Vec2::new(angle_degrees.cos(), angle_degrees.sin()) * speed
+    pub fn linvel(&self, speed: Speed) -> Vec2 {
+        Vec2::new(self.0.cos(), self.0.sin()) * speed
     }
 }
 
@@ -233,23 +235,21 @@ impl Default for Heading {
 
 impl Into<Quat> for Heading {
     fn into(self) -> Quat {
-        let angle_radians = self.0.y.atan2(self.0.x);
+        let angle_radians = self.0 * PI / 360.;
         Quat::from_rotation_z(angle_radians)
     }
 }
 
 impl From<Quat> for Heading {
     fn from(quat: Quat) -> Self {
-        let direction = quat * Vec3::X;
-        let angle_radians = direction.y.atan2(direction.x);
-        Heading(Vec3::new(angle_radians.cos(), angle_radians.sin(), 0.))
+        Heading(quat.to_axis_angle().1)
     }
 }
 
 #[derive(Bundle)]
 pub struct Particle {
     sprite: SpriteBundle,
-    move_speed: MoveSpeed,
+    velocity: Velocity,
     transient_existence: TransientExistence,
 }
 
@@ -263,19 +263,23 @@ impl Particle {
         duration: Option<Duration>,
     ) -> Self {
         let move_speed = match move_speed {
-            Some(x) => MoveSpeed(x),
-            None => MoveSpeed::default(),
+            Some(x) => x,
+            None => DEFAULT_MOVESPEED,
         };
         let transient_existence = match duration {
             Some(x) => TransientExistence::new(x),
             None => TransientExistence::default(),
         };
+        let heading = match heading {
+            Some(x) => x,
+            None => Heading::default(),
+        };
 
         Self {
             sprite: SpriteBundle {
                 transform: Transform {
-                    translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    rotation: *DEFAULT_ROTATION,
+                    translation: Vec3::new(x, y, 0.),
+                    rotation: heading.into(),
                     ..default()
                 },
                 sprite: Sprite {
@@ -284,7 +288,10 @@ impl Particle {
                 },
                 ..default()
             },
-            move_speed,
+            velocity: Velocity {
+                linvel: heading.linvel(move_speed),
+                ..default()
+            },
             transient_existence,
         }
     }
@@ -305,7 +312,7 @@ impl Default for Particle {
                 },
                 ..default()
             },
-            move_speed: MoveSpeed::default(),
+            velocity: Velocity::default(),
             transient_existence: TransientExistence::default(),
         }
     }
@@ -323,6 +330,7 @@ pub struct Projectile {
     restitution: Restitution,
     gravity: GravityScale,
     mass: AdditionalMassProperties,
+    tag: ProjectileTag,
 }
 
 impl Projectile {
@@ -330,17 +338,23 @@ impl Projectile {
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        move_speed: Option<Speed>,
+        projectile_speed: Option<Speed>,
         color: Option<Color>,
         damage: Option<i32>,
         duration: Option<Duration>,
         restitution_coeff: Option<f32>,
         gravity_scale: Option<f32>,
+        tag: ProjectileTag,
     ) -> Self {
-        let particle = gen_particle(x, y, heading, move_speed, color);
-        let sprite = particle.0;
-        let transform = sprite.transform;
-        let velocity = particle.1;
+        let projectile_speed = match projectile_speed {
+            Some(x) => x,
+            None => INIT_SHIP_PROJECTILE_SPEED,
+        };
+
+        let particle = Particle::new(x, y, heading, Some(projectile_speed), color, None);
+        let sprite = particle.sprite;
+        let velocity = particle.velocity;
+
         let damage = match damage {
             Some(x) => Damage(x),
             None => Damage::default(),
@@ -348,10 +362,6 @@ impl Projectile {
         let transient_existence = match duration {
             Some(x) => TransientExistence::new(x),
             None => TransientExistence::default(),
-        };
-        let move_speed = match move_speed {
-            Some(x) => MoveSpeed(x),
-            None => MoveSpeed::default(),
         };
         let restitution = match restitution_coeff {
             Some(x) => Restitution::coefficient(x),
@@ -361,6 +371,7 @@ impl Projectile {
             Some(x) => GravityScale(x),
             None => GravityScale(0.),
         };
+
         Self {
             sprite,
             rigidbody: RigidBody::Dynamic,
@@ -372,15 +383,16 @@ impl Projectile {
             restitution,
             gravity,
             mass: AdditionalMassProperties::Mass(100.),
+            tag: ProjectileTag,
         }
     }
 }
 
 impl Default for Projectile {
     fn default() -> Self {
-        let particle = gen_particle(0., 0., None, None, None);
-        let sprite = particle.0;
-        let velocity = particle.1;
+        let particle = Particle::new(0., 0., None, None, None, None);
+        let sprite = particle.sprite;
+        let velocity = particle.velocity;
         Self {
             sprite,
             damage: Damage::default(),
@@ -392,6 +404,7 @@ impl Default for Projectile {
             restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
             gravity: GravityScale(0.),
             mass: AdditionalMassProperties::Mass(100.),
+            tag: ProjectileTag,
         }
     }
 }
@@ -406,9 +419,8 @@ pub struct ProjectileEmitterBundle {
 
 impl ProjectileEmitterBundle {
     pub fn new(r: f32, heading: Heading, fire_type: Option<FireType>) -> Self {
-        let mut vec2 = Vec2::new(heading.0.x, heading.0.y);
-        vec2 = vec2.normalize();
-
+        let mut vec2 = Vec2::new(heading.0.cos(), heading.0.sin());
+        info!("emitter rel to ship, x:{:?} y:{:?}", vec2.x, vec2.y);
         let fire_type = match fire_type {
             Some(x) => x,
             None => FireType {

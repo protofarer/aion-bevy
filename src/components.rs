@@ -2,16 +2,14 @@ use bevy::prelude::*;
 use bevy::utils::{Duration, Instant};
 
 use crate::{
-    Speed, TurnSpeed, DEFAULT_BODY_ROTATION_RATE, DEFAULT_DAMAGE, DEFAULT_DURATION_SECS,
-    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_THRUST_FORCE_MAGNITUDE, DEFAULT_TURNRATE,
-    DEFAULT_VELOCITY, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED,
-    INIT_SHIP_TURN_RATE,
+    Speed, TurnSpeed, DEFAULT_DAMAGE, DEFAULT_DURATION_SECS, DEFAULT_HEALTH, DEFAULT_MOVESPEED,
+    DEFAULT_PROJECTILE_EMISSION_COOLDOWN, DEFAULT_THRUST_FORCE_MAGNITUDE, DEFAULT_TURNRATE,
+    INIT_SHIP_MOVE_SPEED,
 };
 
 #[derive(Component)]
 pub enum Player {
     A,
-    B,
 }
 
 #[derive(Component)]
@@ -20,15 +18,6 @@ pub struct Health(pub i32);
 impl Default for Health {
     fn default() -> Self {
         Self(DEFAULT_HEALTH)
-    }
-}
-
-#[derive(Component)]
-pub struct BodyRotationRate(pub f32);
-
-impl Default for BodyRotationRate {
-    fn default() -> Self {
-        Self(DEFAULT_BODY_ROTATION_RATE)
     }
 }
 
@@ -84,16 +73,7 @@ impl Default for MoveSpeed {
 }
 
 #[derive(Component)]
-pub struct Collider;
-
-#[derive(Component)]
 pub struct ScoreboardUi;
-
-#[derive(Component)]
-pub struct OnMatchView;
-
-#[derive(Component, Clone)]
-pub struct OnEndScreen;
 
 pub enum FireTypes {
     Primary,
@@ -102,7 +82,7 @@ pub enum FireTypes {
 
 #[derive(Component)]
 pub struct FireType {
-    pub fire_type: FireTypes
+    pub fire_type: FireTypes,
 }
 
 #[derive(Component)]
@@ -146,7 +126,7 @@ impl Default for ProjectileEmission {
     fn default() -> Self {
         Self {
             projectile_speed: INIT_SHIP_MOVE_SPEED + 200.,
-            cooldown_ms: 100,
+            cooldown_ms: DEFAULT_PROJECTILE_EMISSION_COOLDOWN,
             projectile_duration: Duration::from_secs(DEFAULT_DURATION_SECS),
             damage: DEFAULT_DAMAGE,
             is_friendly: false,
@@ -157,3 +137,34 @@ impl Default for ProjectileEmission {
 
 #[derive(Resource)]
 pub struct Score(pub usize);
+
+#[derive(Resource)]
+pub struct BackgroundMusic(pub Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct ShipThrustSound(Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct ProjectileImpactSound(Handle<AudioSource>);
+
+#[derive(Resource)]
+pub struct ProjectileEmitSound(pub Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct AsteroidDamagedSound(Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct AsteroidDestroyedSound(Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct AsteroidImpactSound(Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct ShipDamagedSound(Handle<AudioSource>);
+
+// #[derive(Resource)]
+// pub struct ShipImpactSound(Handle<AudioSource>);
+
+// MARKERS
+#[derive(Component)]
+pub struct ProjectileTag;
