@@ -9,13 +9,13 @@ use rand::Rng;
 use crate::{
     archetypes::gen_particle,
     components::{
-        BodyRotationRate, Damage, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
-        ProjectileEmission, TransientExistence, TurnRate,
+        BodyRotationRate, Damage, FireType, FireTypes, Health, MoveSpeed, Player,
+        PrimaryThrustMagnitude, ProjectileEmission, TransientExistence, TurnRate,
     },
-    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
-    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
-    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE,
-    LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
+    DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE,
+    INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
+    INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -24,6 +24,7 @@ pub struct PlayerShip<M: Material2d> {
     move_speed: MoveSpeed,
     turn_rate: TurnRate,
     collider: Collider,
+    collision_events: ActiveEvents,
     health: Health,
     player: Player,
     rigidbody: RigidBody,
@@ -32,7 +33,7 @@ pub struct PlayerShip<M: Material2d> {
     primary_thrust_magnitude: PrimaryThrustMagnitude,
     restitution: Restitution,
     gravity: GravityScale,
-    children: (ProjectileEmission),
+    damping: Damping,
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -42,56 +43,69 @@ impl<M: Material2d> PlayerShip<M> {
         heading: Option<Heading>,
         mesh: Handle<Mesh>,
         material: Handle<M>,
-    ) -> Self {
-        Self {
-            mesh_bundle: MaterialMesh2dBundle {
-                mesh: mesh.into(),
-                material,
-                transform: Transform {
-                    translation: Vec3::new(x, y, 1.),
-                    rotation: heading.unwrap_or_default().into(),
+    ) -> (Self, (ProjectileEmitterBundle, Thruster)) {
+        (
+            Self {
+                mesh_bundle: MaterialMesh2dBundle {
+                    mesh: mesh.into(),
+                    material,
+                    transform: Transform {
+                        translation: Vec3::new(x, y, 1.),
+                        rotation: heading.unwrap_or_default().into(),
+                        ..default()
+                    },
                     ..default()
                 },
-                // ::from_translation(Vec3::new(0., 0., 0.))
-                //     .with_scale(Vec2::splat(50.).extend(1.)),
-                ..default()
+                collider: Collider::triangle(
+                    Vec2::new(-15., -15.),
+                    Vec2::X * 22.,
+                    Vec2::new(-15., 15.),
+                ),
+                collision_events: ActiveEvents::COLLISION_EVENTS,
+                health: Health(INIT_SHIP_HEALTH),
+                player: Player::A,
+                move_speed: MoveSpeed(INIT_SHIP_MOVE_SPEED),
+                turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
+                rigidbody: RigidBody::Dynamic,
+                velocity: Velocity {
+                    linvel: Vec2::ZERO,
+                    angvel: 0.,
+                },
+                primary_thrust_force: ExternalForce {
+                    force: Vec2::ZERO,
+                    torque: 0.,
+                },
+                primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
+                restitution: Restitution::coefficient(0.7),
+                gravity: GravityScale(0.),
+                damping: Damping {
+                    linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+                    angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+                },
             },
-            collider: Collider::triangle(
-                Vec2::new(-15., -15.),
-                Vec2::X * 22.,
-                Vec2::new(-15., 15.),
+            (
+                ProjectileEmitterBundle::new(
+                    22.,
+                    heading.unwrap_or_default(),
+                    Some(FireType {
+                        fire_type: FireTypes::Primary,
+                    }),
+                ),
+                Thruster::default(),
             ),
-            health: Health(INIT_SHIP_HEALTH),
-            player: Player::A,
-            move_speed: MoveSpeed(INIT_SHIP_MOVE_SPEED),
-            turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
-            rigidbody: RigidBody::Dynamic,
-            velocity: Velocity {
-                linvel: Vec2::ZERO,
-                angvel: 0.,
-            },
-            primary_thrust_force: ExternalForce {
-                force: Vec2::ZERO,
-                torque: 0.,
-            },
-            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
-            restitution: Restitution::coefficient(0.7),
-            gravity: GravityScale(0.),
-            children: ProjectileEmission::default(),
-        }
+        )
     }
 }
 
 #[derive(Bundle)]
 pub struct Asteroid<M: Material2d> {
-    // sprite: SpriteBundle,
     mesh_bundle: MaterialMesh2dBundle<M>,
     rigidbody: RigidBody,
     collider: Collider,
-    health: Health,
-    body_rotation_rate: BodyRotationRate,
-    damage: Damage,
+    collision_events: ActiveEvents,
     velocity: Velocity,
+    health: Health,
+    damage: Damage,
     gravity: GravityScale,
 }
 
@@ -140,8 +154,8 @@ impl<M: Material2d> Asteroid<M> {
             damage,
 
             collider: Collider::ball(r),
+            collision_events: ActiveEvents::COLLISION_EVENTS,
             health: Health(INIT_ASTEROID_HEALTH),
-            body_rotation_rate: BodyRotationRate(body_rotation_rate),
             gravity: GravityScale(0.),
         }
     }
@@ -205,6 +219,9 @@ impl Heading {
         let x = angle_radians.cos();
         let y = angle_radians.sin();
         Heading(Vec3::new(x, y, 0.))
+    }
+    pub fn linvel(angle_degrees: f32, speed: Speed) -> Vec2 {
+        Vec2::new(angle_degrees.cos(), angle_degrees.sin()) * speed
     }
 }
 
@@ -301,6 +318,7 @@ pub struct Projectile {
     transient_existence: TransientExistence,
     rigidbody: RigidBody,
     collider: Collider,
+    collision_events: ActiveEvents,
     velocity: Velocity,
     restitution: Restitution,
     gravity: GravityScale,
@@ -347,6 +365,7 @@ impl Projectile {
             sprite,
             rigidbody: RigidBody::Dynamic,
             collider: Collider::ball(0.5),
+            collision_events: ActiveEvents::COLLISION_EVENTS,
             damage,
             transient_existence,
             velocity,
@@ -368,6 +387,7 @@ impl Default for Projectile {
             transient_existence: TransientExistence::default(),
             rigidbody: RigidBody::Dynamic,
             collider: Collider::ball(1.),
+            collision_events: ActiveEvents::COLLISION_EVENTS,
             velocity,
             restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
             gravity: GravityScale(0.),
@@ -379,15 +399,23 @@ impl Default for Projectile {
 #[derive(Bundle)]
 pub struct ProjectileEmitterBundle {
     emitter: ProjectileEmission,
-    transform: TransformBundle, // transform hierarchy via both Transform and GlobalTransform, so it can "attached" to a ship or other avatar
-                                // sprite: SpriteBundle,
+    transform: TransformBundle,
+    fire_type: FireType, // transform hierarchy via both Transform and GlobalTransform, so it can "attached" to a ship or other avatar
+                         // sprite: SpriteBundle,
 }
 
 impl ProjectileEmitterBundle {
-    pub fn new(r: f32, heading: Heading) -> Self {
+    pub fn new(r: f32, heading: Heading, fire_type: Option<FireType>) -> Self {
         let mut vec2 = Vec2::new(heading.0.x, heading.0.y);
         vec2 = vec2.normalize();
-        dbg!(vec2);
+
+        let fire_type = match fire_type {
+            Some(x) => x,
+            None => FireType {
+                fire_type: FireTypes::Primary,
+            },
+        };
+
         Self {
             emitter: ProjectileEmission::default(),
             transform: TransformBundle {
@@ -397,6 +425,7 @@ impl ProjectileEmitterBundle {
                 },
                 ..default()
             },
+            fire_type,
         }
     }
 }
@@ -406,19 +435,21 @@ impl Default for ProjectileEmitterBundle {
         Self {
             emitter: ProjectileEmission::default(),
             transform: TransformBundle::default(),
-            // sprite: SpriteBundle {
-            //     transform: Transform {
-            //         translation: Vec3::new(0., 0., 2.),
-            //         scale: Vec3::new(10., 10., 1.),
-            //         rotation: Heading::default().into(),
-            //         ..default()
-            //     },
-            //     sprite: Sprite {
-            //         color: Color::RED,
-            //         ..default()
-            //     },
-            //     ..default()
-            // },
+            fire_type: FireType {
+                fire_type: FireTypes::Primary,
+            }, // sprite: SpriteBundle {
+               //     transform: Transform {
+               //         translation: Vec3::new(0., 0., 2.),
+               //         scale: Vec3::new(10., 10., 1.),
+               //         rotation: Heading::default().into(),
+               //         ..default()
+               //     },
+               //     sprite: Sprite {
+               //         color: Color::RED,
+               //         ..default()
+               //     },
+               //     ..default()
+               // },
         }
     }
 }

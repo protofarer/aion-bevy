@@ -18,27 +18,6 @@ pub fn setup_physics(mut commands: Commands) {
     commands
         .spawn(Collider::cuboid(350., 25.))
         .insert(TransformBundle::from(Transform::from_xyz(-350., -50., 0.)));
-
-    // let mut gscale = 1.;
-    // let mut r = 5.;
-    // let mut x = 200.;
-    // for i in (0..5) {
-    //     commands
-    //         .spawn(RigidBody::Dynamic)
-    //         .insert(Collider::ball(r))
-    //         .insert(Restitution::coefficient(0.7))
-    //         .insert(TransformBundle::from(Transform::from_xyz(x, 400., 0.)))
-    //         .insert(GravityScale(gscale));
-    //     // gscale *= 2.;
-    //     r += 5.;
-    //     x += 50.;
-    // }
-    // commands
-    //     .spawn(RigidBody::Dynamic)
-    //     .insert(Collider::ball(50.))
-    //     .insert(Restitution::coefficient(0.7))
-    //     .insert(TransformBundle::from(Transform::from_xyz(200., 51., 0.)))
-    //     .insert(GravityScale(1.));
     commands
         .spawn(RigidBody::Dynamic)
         .insert(Collider::ball(10.))
@@ -51,48 +30,6 @@ pub fn setup_physics(mut commands: Commands) {
         .insert(TransformBundle::from(Transform::from_xyz(-300., 200., 0.)))
         .insert(GravityScale(1.));
 }
-
-// * for single thruster, single ship, not flexible
-// pub fn apply_thrust(
-//     mut commands: Commands,
-//     keyboard_input: Res<ButtonInput<KeyCode>>,
-//     mut q_ship: Query<
-//         (
-//             Entity,
-//             // &mut Velocity,
-//             &mut ExternalForce,
-//             &Transform,
-//             &PrimaryThrustMagnitude,
-//         ),
-//         With<Player>,
-//     >,
-// ) {
-//     let (
-//         id,
-//         // mut vel,
-//         mut primary_thrust_force,
-//         transform,
-//         primary_thrust_magnitude,
-//     ) = q_ship.single_mut();
-
-//     if keyboard_input.pressed(KeyCode::KeyS) {
-//         info!("Added thrust force");
-//         let heading: Heading = transform.rotation.into();
-//         primary_thrust_force.force =
-//             Vec2::new(heading.0.x, heading.0.y) * primary_thrust_magnitude.0;
-//     }
-//     if keyboard_input.just_released(KeyCode::KeyS) {
-//         info!("Removed thrust force");
-//         *primary_thrust_force = ExternalForce {
-//             force: Vec2::ZERO,
-//             torque: 0.,
-//         };
-//         // *vel = Velocity {
-//         //     linvel: Vec2::ZERO,
-//         //     angvel: 0.,
-//         // };
-//     }
-// }
 
 pub fn apply_forces_ship(
     mut commands: Commands,
@@ -115,11 +52,5 @@ pub fn apply_forces_ship(
         let heading: Heading = transform.rotation.into();
         ext_force.force.x += heading.0.x * sum_forces;
         ext_force.force.y += heading.0.y * sum_forces;
-    }
-}
-
-fn print_ball_altitude(positions: Query<&Transform, With<RigidBody>>) {
-    for transform in positions.iter() {
-        println!("Ball altitude: {}", transform.translation.y);
     }
 }

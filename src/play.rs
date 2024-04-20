@@ -1,4 +1,5 @@
 use core::time;
+use std::f32::consts::PI;
 
 use bevy::sprite::Material2d;
 use bevy::utils::{Duration, Instant};
@@ -10,7 +11,7 @@ use rand::Rng;
 
 use crate::avatars::{ProjectileEmitterBundle, Thruster};
 use crate::components::{
-    BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, PrimaryThrustMagnitude,
+    BodyRotationRate, FireType, FireTypes, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
     ProjectileEmission, Score, ScoreboardUi, TurnRate,
 };
 use crate::{
@@ -28,10 +29,8 @@ pub fn play_plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            // apply_velocity,
-            move_ship,
-            apply_body_rotation,
-            system_ship_primary_fire,
+            move_ship, wraparound,
+            ship_fire,
             // check_for_collisions,
             // play_collision_sound,
             // process_score,
@@ -81,63 +80,16 @@ pub fn setup_play(
     // dont lock translations of rigidbody
     // non-zero rigidbody mass
 
-    //TODO destructure playership bundle into 1st level tuple and children tuple
-
-    commands
-        .spawn((
-            MaterialMesh2dBundle {
-                mesh: handle_playership_mesh.into(),
-                material: handle_playership_colormaterial,
-                transform: Transform {
-                    translation: Vec3::new(0., 0., 1.),
-                    rotation: Heading::default().into(),
-                    ..default()
-                },
-                ..default()
-            },
-            Health(INIT_SHIP_HEALTH),
-            Player::A,
-            MoveSpeed(INIT_SHIP_MOVE_SPEED),
-            TurnRate(INIT_SHIP_TURN_RATE),
-        ))
-        .insert(Collider::triangle(
-            Vec2::new(-15., -15.),
-            Vec2::X * 22.,
-            Vec2::new(-15., 15.),
-        ))
-        .insert(RigidBody::Dynamic)
-        .insert(Velocity {
-            linvel: Vec2::ZERO,
-            angvel: 0.,
-        })
-        // .insert(PrimaryThrustMagnitude(10000.))
-        .insert(ExternalForce {
-            force: Vec2::ZERO,
-            torque: 0.,
-        })
-        .insert(Restitution::coefficient(0.7))
-        .insert(GravityScale(0.))
-        .insert(Damping {
-            linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-            angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
-        })
-        .with_children(|parent| {
-            parent.spawn((
-                ProjectileEmitterBundle::new(22., Heading::default()),
-                PrimaryFire,
-            ));
-            parent.spawn(Thruster::default());
-        });
-
-    // commands.spawn(Projectile::new(
-    //     100.,
-    //     100.,
-    //     None,
-    //     None,
-    //     Some(Color::RED),
-    //     None,
-    //     None,
-    // ));
+    let (ship, children) = PlayerShip::new(
+        0.,
+        0.,
+        None,
+        handle_playership_mesh,
+        handle_playership_colormaterial,
+    );
+    commands.spawn(ship).with_children(|parent| {
+        parent.spawn(children);
+    });
 
     // Asteroids
     let handle_asteroid_colormaterial = materials.add(Color::GRAY);
@@ -167,6 +119,17 @@ pub fn setup_play(
         handle_asteroid_colormaterial.clone(),
         None,
         None,
+        None,
+    ));
+
+    commands.spawn(Asteroid::new(
+        200.,
+        -50.,
+        MEDIUM_ASTEROID_R,
+        handle_polygon.clone(),
+        handle_asteroid_colormaterial.clone(),
+        Some(Heading::from_angle(-PI / 2.)),
+        Some(500.),
         None,
     ));
 
@@ -236,18 +199,6 @@ pub fn draw_boundary(mut painter: ShapePainter) {
     );
 }
 
-// pub fn apply_velocity(mut query: Query<(&mut Transform, &Velocity)>, time: Res<Time>) {
-//     for (mut transform, velocity) in &mut query {
-//         transform.translation.x += velocity.x * time.delta_seconds();
-//         transform.translation.y += velocity.y * time.delta_seconds();
-//     }
-// }
-
-pub fn apply_body_rotation(mut query: Query<(&mut Transform, &BodyRotationRate)>, time: Res<Time>) {
-    for (mut transform, brr) in &mut query {
-        transform.rotate_z(brr.0);
-    }
-}
 pub fn move_ship(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&mut Transform, &TurnRate, &MoveSpeed), With<Player>>,
@@ -272,7 +223,11 @@ pub fn move_ship(
             rotation_sign -= 1.;
         }
         transform.rotate_z(rotation_sign * turnrate.0 * time.delta_seconds());
+    }
+}
 
+pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
+    for (mut transform) in query.iter_mut() {
         if (transform.translation.y >= TOP_WALL) {
             transform.translation.y = BOTTOM_WALL + (transform.translation.y - TOP_WALL);
         }
@@ -288,11 +243,11 @@ pub fn move_ship(
     }
 }
 
-pub fn system_ship_primary_fire(
+pub fn ship_fire(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<(&Children), With<Player>>,
-    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission), With<PrimaryFire>>,
+    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
     time: Res<Time>,
 ) {
     // when fire key pressed
@@ -300,30 +255,35 @@ pub fn system_ship_primary_fire(
         // find ship, get children projectile emitters
         for (children) in &mut q_ship {
             for child in children {
-                if let Ok((transform, mut emitter)) = q_emitter.get_mut(*child) {
-                    // spawn projectile
-                    let last_emit = emitter.last_emission_time;
-                    if last_emit.elapsed().as_millis() as i32 >= emitter.cooldown_ms {
-                        emitter.last_emission_time = Instant::now();
-                        // get and set projectile props
-                        let (_scale, rotation, translation) =
-                            transform.to_scale_rotation_translation();
+                if let Ok((transform, mut emitter, firetype)) = q_emitter.get_mut(*child) {
+                    // spawn primary fire projectile
+                    match firetype.fire_type {
+                        FireTypes::Primary => {
+                            let last_emit = emitter.last_emission_time;
+                            if last_emit.elapsed().as_millis() as i32 >= emitter.cooldown_ms {
+                                emitter.last_emission_time = Instant::now();
+                                // get and set projectile props
+                                let (_scale, rotation, translation) =
+                                    transform.to_scale_rotation_translation();
 
-                        // TODO better way to tackle this? don't set a default heading/"offset"???
-                        let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
+                                // TODO better way to tackle this? don't set a default heading/"offset"???
+                                let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
 
-                        commands.spawn(Projectile::new(
-                            translation.x,
-                            translation.y,
-                            Some(Heading(movement_direction.into())),
-                            Some(emitter.projectile_speed),
-                            None,
-                            Some(emitter.damage),
-                            Some(emitter.projectile_duration),
-                            None,
-                            None,
-                        ));
-                    }
+                                commands.spawn(Projectile::new(
+                                    translation.x,
+                                    translation.y,
+                                    Some(Heading(movement_direction.into())),
+                                    Some(emitter.projectile_speed),
+                                    None,
+                                    Some(emitter.damage),
+                                    Some(emitter.projectile_duration),
+                                    None,
+                                    None,
+                                ));
+                            }
+                        }
+                        _ => (),
+                    };
                 }
             }
         }

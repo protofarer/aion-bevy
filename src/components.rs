@@ -95,8 +95,15 @@ pub struct OnMatchView;
 #[derive(Component, Clone)]
 pub struct OnEndScreen;
 
+pub enum FireTypes {
+    Primary,
+    Secondary,
+}
+
 #[derive(Component)]
-pub struct PrimaryFire;
+pub struct FireType {
+    pub fire_type: FireTypes
+}
 
 #[derive(Component)]
 pub struct PrimaryThrustMagnitude(pub f32);
