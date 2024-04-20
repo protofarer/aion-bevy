@@ -47,6 +47,12 @@ const DEFAULT_VELOCITY: Vec2 = Vec2::new(100., 0.);
 const DEFAULT_RESTITUTION: f32 = 0.5;
 const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
 
+// UI
+const SCOREBOARD_FONT_SIZE: f32 = 20.0;
+const SCOREBOARD_TEXT_PADDING: Val = Val::Px(5.0);
+const LABEL_COLOR: Color = Color::LIME_GREEN;
+const SCORE_COLOR: Color = Color::LIME_GREEN;
+
 // Ship
 const INIT_SHIP_MOVE_SPEED: Speed = 300.;
 const INIT_SHIP_TURN_RATE: TurnSpeed = 5.;

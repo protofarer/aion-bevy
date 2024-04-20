@@ -11,7 +11,7 @@ use rand::Rng;
 use crate::avatars::{ProjectileEmitterBundle, Thruster};
 use crate::components::{
     BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, PrimaryThrustMagnitude,
-    ProjectileEmission, TurnRate,
+    ProjectileEmission, Score, ScoreboardUi, TurnRate,
 };
 use crate::{
     avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
@@ -21,7 +21,7 @@ use crate::{
 };
 use crate::{
     AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_MOVESPEED,
-    DEFAULT_ROTATION,
+    DEFAULT_ROTATION, LABEL_COLOR, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -44,33 +44,17 @@ pub fn play_plugin(app: &mut App) {
         Update,
         (
             bevy::window::close_on_esc,
-            draw_boundary, // run_end.run_if(in_state(GameState::End)),
-            // (update_score_ui, bevy::window::close_on_esc, run_match).in_set(MatchSet),
+            draw_boundary,
             draw_line,
+            update_scoreboard,
         ),
     )
     .configure_sets(Update, (PlaySet.run_if(in_state(GameState::Match))))
-    .configure_sets(FixedUpdate, (PlaySet.run_if(in_state(GameState::Match))));
-    // .add_systems(OnEnter(GameState::Match), setup_match)
-    // .add_systems(OnEnter(GameState::End), setup_end)
-    // .add_systems(OnExit(GameState::Match), despawn_screen::<OnMatchView>)
-    // .add_systems(OnExit(GameState::End), despawn_screen::<OnEndScreen>)
-    // .configure_sets(
-    //     Update,
-    //     (
-    //         PlaySet.run_if(in_state(RoundState::In)),
-    //         MatchSet.run_if(in_state(GameState::Match)),
-    //     ),
-    // )
-    // .configure_sets(FixedUpdate, (PlaySet.run_if(in_state(RoundState::In)),))
-    // .add_event::<CollisionEvent>()
-    // .add_event::<ScoreEvent>();
+    .configure_sets(FixedUpdate, (PlaySet.run_if(in_state(GameState::Match))))
+    .insert_resource(Score(0));
 }
 
 pub fn setup_play(
-    // mut scores: ResMut<Scores>,
-    // mut match_: ResMut<MatchInfo>,
-    // mut next_state: ResMut<NextState<RoundState>>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -186,48 +170,30 @@ pub fn setup_play(
         None,
     ));
 
-    // // Scores
-    // // A
-    // commands.spawn((
-    //     ScoreboardUi(Player::A),
-    //     TextBundle::from_sections([TextSection::from_style(TextStyle {
-    //         font_size: SCORE_FONT_SIZE,
-    //         color: TEXT_COLOR,
-    //         ..default()
-    //     })])
-    //     .with_style(Style {
-    //         // position_type: PositionType::Relative,
-    //         // top: Val::Px(100.),
-    //         // left: Val::Percent(25.),
-    //         top: SCORE_A_POSITION.top,
-    //         left: SCORE_A_POSITION.left,
-    //         ..default()
-    //     }),
-    //     OnMatchView,
-    // ));
-    // // B
-    // commands.spawn((
-    //     ScoreboardUi(Player::B),
-    //     TextBundle::from_sections([TextSection::from_style(TextStyle {
-    //         font_size: SCORE_FONT_SIZE,
-    //         color: TEXT_COLOR,
-    //         ..default()
-    //     })])
-    //     .with_style(Style {
-    //         // position_type: PositionType::Relative,
-    //         top: SCORE_B_POSITION.top,
-    //         left: SCORE_B_POSITION.left,
-    //         ..default()
-    //     }),
-    //     OnMatchView,
-    // ));
-
-    // commands.spawn((WallBundle::new(WallLocation::Bottom), OnMatchView));
-    // commands.spawn((WallBundle::new(WallLocation::Top), OnMatchView));
-    // commands.spawn((GoalBundle::new(GoalLocation::Left), OnMatchView));
-    // commands.spawn((GoalBundle::new(GoalLocation::Right), OnMatchView));
-
-    // next_state.set(RoundState::Countdown);
+    commands.spawn((
+        ScoreboardUi,
+        TextBundle::from_sections([
+            TextSection::new(
+                "Score: ",
+                TextStyle {
+                    font_size: SCOREBOARD_FONT_SIZE,
+                    color: LABEL_COLOR,
+                    ..default()
+                },
+            ),
+            TextSection::from_style(TextStyle {
+                font_size: SCOREBOARD_FONT_SIZE,
+                color: SCORE_COLOR,
+                ..default()
+            }),
+        ])
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: SCOREBOARD_TEXT_PADDING * 10.,
+            right: SCOREBOARD_TEXT_PADDING,
+            ..default()
+        }),
+    ));
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
@@ -371,3 +337,8 @@ pub fn system_ship_primary_fire(
 // ) {
 
 // }
+
+fn update_scoreboard(scoreboard: Res<Score>, mut query: Query<&mut Text, With<ScoreboardUi>>) {
+    let mut text = query.single_mut();
+    text.sections[1].value = scoreboard.0.to_string();
+}

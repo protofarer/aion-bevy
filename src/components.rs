@@ -87,7 +87,7 @@ impl Default for MoveSpeed {
 pub struct Collider;
 
 #[derive(Component)]
-pub struct ScoreboardUi(Player);
+pub struct ScoreboardUi;
 
 #[derive(Component)]
 pub struct OnMatchView;
@@ -147,3 +147,6 @@ impl Default for ProjectileEmission {
         }
     }
 }
+
+#[derive(Resource)]
+pub struct Score(pub usize);

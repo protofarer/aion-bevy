@@ -383,7 +383,6 @@ pub struct ProjectileEmitterBundle {
                                 // sprite: SpriteBundle,
 }
 
-// TODO spawn with transform aligned with parent entity
 impl ProjectileEmitterBundle {
     pub fn new(r: f32, heading: Heading) -> Self {
         let mut vec2 = Vec2::new(heading.0.x, heading.0.y);
