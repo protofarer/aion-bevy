@@ -1,6 +1,7 @@
 #![allow(unused)]
 
-use avatars::Heading;
+use std::f32::consts::PI;
+
 use components::{BackgroundMusic, ProjectileEmitSound};
 use lazy_static::lazy_static;
 
@@ -9,6 +10,8 @@ use bevy_vector_shapes::Shape2dPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
 use play::setup_play;
 
+use crate::utils::Heading;
+
 mod archetypes;
 mod avatars;
 mod components;
@@ -16,6 +19,7 @@ mod fps;
 mod physics;
 mod play;
 mod systems;
+mod utils;
 
 pub type Speed = f32;
 pub type TurnSpeed = f32;

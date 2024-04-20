@@ -10,7 +10,8 @@ use crate::components::{
     ScoreboardUi, TurnRate,
 };
 use crate::{
-    avatars::{Asteroid, Heading, PlayerShip, Projectile},
+    avatars::{Asteroid, PlayerShip, Projectile},
+    utils::Heading,
     GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
 };
 use crate::{
@@ -241,17 +242,10 @@ pub fn ship_fire(
                                 let (_scale, rotation, translation) =
                                     global_transform.to_scale_rotation_translation();
 
-                                // TODO better way to tackle this? don't set a default heading/"offset"???
-                                let dir: Heading = rotation.into();
-                                // let z_rot = dir.0.z;
-                                // let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
-
-                                info!("emitter global x:{:?} y:{:?}", translation.x, translation.y);
                                 commands.spawn(Projectile::new(
                                     translation.x,
                                     translation.y,
-                                    // Some(Heading(movement_direction.into())),
-                                    Some(dir),
+                                    Some(rotation.into()),
                                     Some(emitter.projectile_speed),
                                     None,
                                     Some(emitter.damage),

@@ -12,12 +12,7 @@ use crate::{
     components::{
         Damage, FireType, FireTypes, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
         ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
-    },
-    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
-    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
-    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED,
-    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    }, utils::Heading, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL
 };
 
 #[derive(Bundle)]
@@ -212,39 +207,6 @@ impl Default for Boxoid {
     }
 }
 
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub struct Heading(pub f32); // degrees
-
-impl Heading {
-    pub fn to_vec3(&self) -> Vec3 {
-        let angle_radians = self.0.to_radians();
-        let x = angle_radians.cos();
-        let y = angle_radians.sin();
-        Vec3::new(x, y, 0.)
-    }
-    pub fn linvel(&self, speed: Speed) -> Vec2 {
-        Vec2::new(self.0.cos(), self.0.sin()) * speed
-    }
-}
-
-impl Default for Heading {
-    fn default() -> Self {
-        Heading(DEFAULT_HEADING.0)
-    }
-}
-
-impl Into<Quat> for Heading {
-    fn into(self) -> Quat {
-        let angle_radians = self.0 * PI / 360.;
-        Quat::from_rotation_z(angle_radians)
-    }
-}
-
-impl From<Quat> for Heading {
-    fn from(quat: Quat) -> Self {
-        Heading(quat.to_axis_angle().1)
-    }
-}
 
 #[derive(Bundle)]
 pub struct Particle {
@@ -420,7 +382,6 @@ pub struct ProjectileEmitterBundle {
 impl ProjectileEmitterBundle {
     pub fn new(r: f32, heading: Heading, fire_type: Option<FireType>) -> Self {
         let mut vec2 = Vec2::new(heading.0.cos(), heading.0.sin());
-        info!("emitter rel to ship, x:{:?} y:{:?}", vec2.x, vec2.y);
         let fire_type = match fire_type {
             Some(x) => x,
             None => FireType {

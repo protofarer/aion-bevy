@@ -1,10 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use crate::{
-    avatars::{Heading, Thruster},
-    components::Player,
-};
+use crate::{avatars::Thruster, components::Player, utils::Heading};
 
 pub fn physics_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
