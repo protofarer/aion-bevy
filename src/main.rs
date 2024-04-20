@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use avatars::Heading;
 use lazy_static::lazy_static;
 use std::f32::consts::PI;
 
@@ -34,9 +35,9 @@ const TOP_WALL: f32 = 432.;
 // General
 const DEFAULT_MOVESPEED: Speed = 100.;
 const DEFAULT_HEALTH: i32 = 1;
-// const DEFAULT_HEADING: Quat = Quat::from_xyzw(0., 0., 0.71, 0.71);
 lazy_static! {
-    static ref DEFAULT_HEADING: Quat = Quat::from_rotation_z(0.);
+    static ref DEFAULT_HEADING: Heading = Heading::from_angle(0.);
+    static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(0.);
 }
 const DEFAULT_BODY_ROTATION_RATE: f32 = 0.;
 const DEFAULT_TURNRATE: f32 = 10.;

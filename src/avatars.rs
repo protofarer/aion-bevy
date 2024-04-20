@@ -10,11 +10,12 @@ use crate::{
     archetypes::gen_particle,
     components::{
         BodyRotationRate, Damage, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
-        ProjectileEmitter, TransientExistence, TurnRate,
+        ProjectileEmission, TransientExistence, TurnRate,
     },
-    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_THRUST_FORCE_MAGNITUDE,
-    INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH,
-    INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    Speed, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
+    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
+    INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_TURN_RATE,
+    LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -31,7 +32,7 @@ pub struct PlayerShip<M: Material2d> {
     primary_thrust_magnitude: PrimaryThrustMagnitude,
     restitution: Restitution,
     gravity: GravityScale,
-    children: (ProjectileEmitter),
+    children: (ProjectileEmission),
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -76,7 +77,7 @@ impl<M: Material2d> PlayerShip<M> {
             primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
             restitution: Restitution::coefficient(0.7),
             gravity: GravityScale(0.),
-            children: ProjectileEmitter::default(),
+            children: ProjectileEmission::default(),
         }
     }
 }
@@ -85,11 +86,13 @@ impl<M: Material2d> PlayerShip<M> {
 pub struct Asteroid<M: Material2d> {
     // sprite: SpriteBundle,
     mesh_bundle: MaterialMesh2dBundle<M>,
+    rigidbody: RigidBody,
     collider: Collider,
     health: Health,
     body_rotation_rate: BodyRotationRate,
-    move_speed: MoveSpeed,
     damage: Damage,
+    velocity: Velocity,
+    gravity: GravityScale,
 }
 
 impl<M: Material2d> Asteroid<M> {
@@ -113,23 +116,33 @@ impl<M: Material2d> Asteroid<M> {
             Some(x) => Damage(x),
             None => Damage(INIT_ASTEROID_DAMAGE),
         };
+        let heading = match heading {
+            Some(x) => x,
+            None => Heading::default(),
+        };
         Self {
             mesh_bundle: MaterialMesh2dBundle {
                 mesh: mesh.into(),
                 material,
                 transform: Transform {
                     translation: Vec3::new(x, y, 2.),
-                    rotation: heading.unwrap_or_default().into(),
+                    rotation: heading.into(),
                     scale: Vec2::splat(1.).extend(1.),
                     ..default()
                 },
                 ..default()
             },
-            move_speed,
+            rigidbody: RigidBody::Dynamic,
+            velocity: Velocity {
+                linvel: Vec2::new(heading.0.x, heading.0.y) * move_speed.0,
+                ..default()
+            },
             damage,
+
             collider: Collider::ball(r),
             health: Health(INIT_ASTEROID_HEALTH),
             body_rotation_rate: BodyRotationRate(body_rotation_rate),
+            gravity: GravityScale(0.),
         }
     }
 }
@@ -148,7 +161,7 @@ impl Boxoid {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
                     scale: Vec3::new(half_x * 2., half_y * 2., 0.0),
-                    rotation: *DEFAULT_HEADING,
+                    rotation: *DEFAULT_ROTATION,
                 },
                 sprite: Sprite {
                     color: Color::ORANGE_RED,
@@ -173,7 +186,7 @@ impl Default for Boxoid {
                         0.,
                     ),
                     scale: Vec3::new(50., 50., 0.0),
-                    rotation: *DEFAULT_HEADING,
+                    rotation: *DEFAULT_ROTATION,
                 },
                 ..default()
             },
@@ -197,7 +210,7 @@ impl Heading {
 
 impl Default for Heading {
     fn default() -> Self {
-        Heading(DEFAULT_HEADING.xyz())
+        Heading(DEFAULT_HEADING.0)
     }
 }
 
@@ -245,7 +258,7 @@ impl Particle {
             sprite: SpriteBundle {
                 transform: Transform {
                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    rotation: *DEFAULT_HEADING,
+                    rotation: *DEFAULT_ROTATION,
                     ..default()
                 },
                 sprite: Sprite {
@@ -270,7 +283,7 @@ impl Default for Particle {
                         BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
                         0.,
                     ),
-                    rotation: *DEFAULT_HEADING,
+                    rotation: *DEFAULT_ROTATION,
                     ..default()
                 },
                 ..default()
@@ -291,6 +304,7 @@ pub struct Projectile {
     velocity: Velocity,
     restitution: Restitution,
     gravity: GravityScale,
+    mass: AdditionalMassProperties,
 }
 
 impl Projectile {
@@ -338,6 +352,7 @@ impl Projectile {
             velocity,
             restitution,
             gravity,
+            mass: AdditionalMassProperties::Mass(100.),
         }
     }
 }
@@ -356,30 +371,41 @@ impl Default for Projectile {
             velocity,
             restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
             gravity: GravityScale(0.),
+            mass: AdditionalMassProperties::Mass(100.),
         }
     }
 }
 
 #[derive(Bundle)]
 pub struct ProjectileEmitterBundle {
-    emitter: ProjectileEmitter,
+    emitter: ProjectileEmission,
     transform: TransformBundle, // transform hierarchy via both Transform and GlobalTransform, so it can "attached" to a ship or other avatar
                                 // sprite: SpriteBundle,
 }
 
 // TODO spawn with transform aligned with parent entity
-// impl ProjectileEmitterBundle {
-//     pub fn new() -> Self {
-//         Self {
-
-//         }
-//     }
-// }
+impl ProjectileEmitterBundle {
+    pub fn new(r: f32, heading: Heading) -> Self {
+        let mut vec2 = Vec2::new(heading.0.x, heading.0.y);
+        vec2 = vec2.normalize();
+        dbg!(vec2);
+        Self {
+            emitter: ProjectileEmission::default(),
+            transform: TransformBundle {
+                local: Transform {
+                    translation: Vec3::new(vec2.x, vec2.y, 0.) * 1.05 * r,
+                    ..default()
+                },
+                ..default()
+            },
+        }
+    }
+}
 
 impl Default for ProjectileEmitterBundle {
     fn default() -> Self {
         Self {
-            emitter: ProjectileEmitter::default(),
+            emitter: ProjectileEmission::default(),
             transform: TransformBundle::default(),
             // sprite: SpriteBundle {
             //     transform: Transform {

@@ -11,7 +11,7 @@ use rand::Rng;
 use crate::avatars::{ProjectileEmitterBundle, Thruster};
 use crate::components::{
     BodyRotationRate, Health, MoveSpeed, Player, PrimaryFire, PrimaryThrustMagnitude,
-    ProjectileEmitter, TurnRate,
+    ProjectileEmission, TurnRate,
 };
 use crate::{
     avatars::{Asteroid, Boxoid, Heading, PlayerShip, Projectile},
@@ -20,8 +20,8 @@ use crate::{
     LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_R, TOP_WALL,
 };
 use crate::{
-    AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_HEADING,
-    DEFAULT_MOVESPEED,
+    AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_MOVESPEED,
+    DEFAULT_ROTATION,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -138,7 +138,10 @@ pub fn setup_play(
             angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
         })
         .with_children(|parent| {
-            parent.spawn((ProjectileEmitterBundle::default(), PrimaryFire));
+            parent.spawn((
+                ProjectileEmitterBundle::new(22., Heading::default()),
+                PrimaryFire,
+            ));
             parent.spawn(Thruster::default());
         });
 
@@ -173,8 +176,8 @@ pub fn setup_play(
     // }
     let handle_polygon = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
     commands.spawn(Asteroid::new(
+        200.,
         0.,
-        250.,
         MEDIUM_ASTEROID_R,
         handle_polygon.clone(),
         handle_asteroid_colormaterial.clone(),
@@ -323,7 +326,7 @@ pub fn system_ship_primary_fire(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<(&Children), With<Player>>,
-    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmitter), With<PrimaryFire>>,
+    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission), With<PrimaryFire>>,
     time: Res<Time>,
 ) {
     // when fire key pressed
@@ -341,7 +344,7 @@ pub fn system_ship_primary_fire(
                             transform.to_scale_rotation_translation();
 
                         // TODO better way to tackle this? don't set a default heading/"offset"???
-                        let movement_direction = (rotation * *DEFAULT_HEADING) * Vec3::X;
+                        let movement_direction = (rotation * *DEFAULT_ROTATION) * Vec3::X;
 
                         commands.spawn(Projectile::new(
                             translation.x,

@@ -16,8 +16,8 @@ pub fn physics_plugin(app: &mut App) {
 
 pub fn setup_physics(mut commands: Commands) {
     commands
-        .spawn(Collider::cuboid(700., 50.))
-        .insert(TransformBundle::from(Transform::from_xyz(0., -100., 0.)));
+        .spawn(Collider::cuboid(350., 25.))
+        .insert(TransformBundle::from(Transform::from_xyz(-350., -50., 0.)));
 
     // let mut gscale = 1.;
     // let mut r = 5.;

@@ -108,7 +108,7 @@ impl Default for PrimaryThrustMagnitude {
 }
 
 #[derive(Component)]
-pub struct ProjectileEmitter {
+pub struct ProjectileEmission {
     pub projectile_speed: Speed,
     pub cooldown_ms: i32,
     pub projectile_duration: Duration,
@@ -117,7 +117,7 @@ pub struct ProjectileEmitter {
     pub last_emission_time: Instant,
 }
 
-impl ProjectileEmitter {
+impl ProjectileEmission {
     pub fn new(
         projectile_speed: Speed,
         cooldown: i32,
@@ -135,7 +135,7 @@ impl ProjectileEmitter {
     }
 }
 
-impl Default for ProjectileEmitter {
+impl Default for ProjectileEmission {
     fn default() -> Self {
         Self {
             projectile_speed: INIT_SHIP_MOVE_SPEED + 200.,
