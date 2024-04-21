@@ -4,9 +4,9 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    audio::{ShipThrustSound, ShipThrustSoundStopwatch},
+    audio::{ProjectileImpactSound, ShipThrustSound, ShipThrustSoundStopwatch},
     avatars::Thruster,
-    components::Player,
+    components::{Player, ProjectileTag},
     utils::Heading,
 };
 
@@ -82,13 +82,23 @@ pub fn apply_forces_ship(
     }
 }
 
-fn handle_projectile_collision_events(mut collision_events: EventReader<CollisionEvent>) {
+fn handle_projectile_collision_events(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionEvent>,
+    collision_sound: Res<ProjectileImpactSound>,
+    projectile_query: Query<&ProjectileTag>
+) {
     for event in collision_events.read() {
-        info!("collision event {:?}", event);
+        match event {
+            CollisionEvent::Started(ent_a, ent_b, _flags) => {
+                if projectile_query.get(*ent_a).is_ok() || projectile_query.get(*ent_b).is_ok() {
+                    commands.spawn(AudioBundle {
+                        source: collision_sound.0.clone(),
+                        settings: PlaybackSettings::DESPAWN,
+                    });
+                }
+            }
+            _ => {}
+        }
     }
-
-    // commands.spawn(AudioBundle {
-    //     source: bg_music.0.clone(),
-    //     settings: PlaybackSettings::DESPAWN,
-    // });
 }

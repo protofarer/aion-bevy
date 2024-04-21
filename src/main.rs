@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use audio::{ProjectileEmitSound, ShipThrustSound};
+use audio::{ProjectileEmitSound, ProjectileImpactSound, ShipThrustSound};
 use lazy_static::lazy_static;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
@@ -39,7 +39,7 @@ const TOP_WALL: f32 = 432.;
 // General
 const DEFAULT_MOVESPEED: Speed = 100.;
 const DEFAULT_HEALTH: i32 = 1;
-const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 300;
+const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 25;
 lazy_static! {
     static ref DEFAULT_HEADING: Heading = Heading(0.);
     static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(0.);
@@ -101,6 +101,8 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(ProjectileEmitSound(light_shot_sound));
     let ship_thrust_sound = asset_server.load("sounds/thrust.wav");
     commands.insert_resource(ShipThrustSound(ship_thrust_sound));
+    let tmp_collision_sound = asset_server.load("sounds/scratch.wav");
+    commands.insert_resource(ProjectileImpactSound(tmp_collision_sound));
 
     // commands.insert_resource(ProjectileEmitSound());
     // commands.insert_resource(ShipThrustSound());

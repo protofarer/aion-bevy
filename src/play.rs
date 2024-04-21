@@ -93,7 +93,7 @@ pub fn setup_play(
     // }
     let handle_polygon = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
     commands.spawn(Asteroid::new(
-        200.,
+        -400.,
         0.,
         MEDIUM_ASTEROID_R,
         handle_polygon.clone(),
