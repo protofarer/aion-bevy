@@ -1,7 +1,14 @@
+use std::time::Duration;
+
 use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
-use crate::{avatars::Thruster, components::Player, utils::Heading};
+use crate::{
+    audio::{ShipThrustSound, ShipThrustSoundStopwatch},
+    avatars::Thruster,
+    components::Player,
+    utils::Heading,
+};
 
 pub fn physics_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
@@ -32,14 +39,20 @@ pub fn setup_physics(mut commands: Commands) {
 }
 
 pub fn apply_forces_ship(
+    mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<(&Children, &mut ExternalForce, &Transform), With<Player>>,
     mut q_thruster: Query<&Thruster>,
+    thrust_sound: Res<ShipThrustSound>,
+    mut thrust_sound_stopwatch: ResMut<ShipThrustSoundStopwatch>,
+    time: Res<Time>,
 ) {
     let (children, mut ext_force, transform) = q_ship.single_mut();
 
     // clear all external forces and torques on ship
     *ext_force = ExternalForce::default();
+
+    thrust_sound_stopwatch.0.tick(time.delta());
 
     if keyboard_input.pressed(KeyCode::KeyS) {
         let mut sum_forces: f32 = 0.;
@@ -48,9 +61,24 @@ pub fn apply_forces_ship(
                 sum_forces += thruster.0;
             }
         }
+
         let heading: Heading = transform.rotation.into();
         ext_force.force.x += heading.0.cos() * sum_forces;
         ext_force.force.y += heading.0.sin() * sum_forces;
+
+        if thrust_sound_stopwatch.0.elapsed() >= Duration::from_secs_f32(0.3) {
+            thrust_sound_stopwatch.0.reset();
+            commands.spawn(AudioBundle {
+                source: thrust_sound.0.clone(),
+                ..default()
+            });
+        }
+    }
+    if keyboard_input.just_pressed(KeyCode::KeyS) {
+        commands.spawn(AudioBundle {
+            source: thrust_sound.0.clone(),
+            ..default()
+        });
     }
 }
 

@@ -138,33 +138,6 @@ impl Default for ProjectileEmission {
 #[derive(Resource)]
 pub struct Score(pub usize);
 
-#[derive(Resource)]
-pub struct BackgroundMusic(pub Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct ShipThrustSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct ProjectileImpactSound(Handle<AudioSource>);
-
-#[derive(Resource)]
-pub struct ProjectileEmitSound(pub Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct AsteroidDamagedSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct AsteroidDestroyedSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct AsteroidImpactSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct ShipDamagedSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct ShipImpactSound(Handle<AudioSource>);
-
 // MARKERS
 #[derive(Component)]
 pub struct ProjectileTag;

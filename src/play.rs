@@ -1,13 +1,14 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
+use bevy::time::Stopwatch;
 use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
+use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
 use crate::components::{
-    BackgroundMusic, FireType, FireTypes, Player, ProjectileEmission, ProjectileTag, Score,
-    ScoreboardUi, TurnRate,
+    FireType, FireTypes, Player, ProjectileEmission, ProjectileTag, Score, ScoreboardUi, TurnRate,
 };
 use crate::{
     avatars::{Asteroid, PlayerShip, Projectile},
@@ -51,6 +52,8 @@ pub fn setup_play(
     mut materials: ResMut<Assets<ColorMaterial>>,
     // bg_music: Res<BackgroundMusic>,
 ) {
+    commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
+
     let handle_playership_mesh = meshes.add(Triangle2d::new(
         Vec2::new(-15., -15.),
         Vec2::X * 22.,
@@ -224,6 +227,7 @@ pub fn ship_fire(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<&Children, With<Player>>,
     mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
+    fire_sound: Res<ProjectileEmitSound>,
 ) {
     // when fire key pressed
     if keyboard_input.pressed(KeyCode::Space) {
@@ -254,6 +258,10 @@ pub fn ship_fire(
                                     None,
                                     ProjectileTag,
                                 ));
+                                commands.spawn(AudioBundle {
+                                    source: fire_sound.0.clone(),
+                                    ..default()
+                                });
                             }
                         }
                         _ => (),

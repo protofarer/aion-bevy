@@ -2,7 +2,7 @@
 
 use std::f32::consts::PI;
 
-use components::{BackgroundMusic, ProjectileEmitSound};
+use audio::{ProjectileEmitSound, ShipThrustSound};
 use lazy_static::lazy_static;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
@@ -13,6 +13,7 @@ use play::setup_play;
 use crate::utils::Heading;
 
 mod archetypes;
+mod audio;
 mod avatars;
 mod components;
 mod fps;
@@ -98,6 +99,8 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     let light_shot_sound = asset_server.load("sounds/light_shot.wav");
     commands.insert_resource(ProjectileEmitSound(light_shot_sound));
+    let ship_thrust_sound = asset_server.load("sounds/thrust.wav");
+    commands.insert_resource(ShipThrustSound(ship_thrust_sound));
 
     // commands.insert_resource(ProjectileEmitSound());
     // commands.insert_resource(ShipThrustSound());
