@@ -12,17 +12,14 @@ pub struct ShipThrustSound(pub Handle<AudioSource>);
 #[derive(Resource)]
 pub struct ProjectileImpactSound(pub Handle<AudioSource>);
 
-// #[derive(Resource)]
-// pub struct AsteroidDamagedSound(Handle<AudioSource>);
-
-// #[derive(Resource)]
-// pub struct AsteroidDestroyedSound(Handle<AudioSource>);
+#[derive(Resource)]
+pub struct AsteroidDestroyedSound(pub Handle<AudioSource>);
 
 // #[derive(Resource)]
 // pub struct AsteroidImpactSound(Handle<AudioSource>);
 
-// #[derive(Resource)]
-// pub struct ShipDamagedSound(Handle<AudioSource>);
+#[derive(Resource)]
+pub struct ShipDamagedSound(pub Handle<AudioSource>);
 
 // #[derive(Resource)]
 // pub struct ShipImpactSound(Handle<AudioSource>);

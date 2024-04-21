@@ -9,10 +9,18 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
+    archetypes::{Asteroid, AsteroidSizes},
     components::{
-        Damage, FireType, FireTypes, Health, MoveSpeed, Player, PrimaryThrustMagnitude,
-        ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
-    }, utils::Heading, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVE_SPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL
+        AsteroidTag, Damage, FireType, FireTypes, Health, MoveSpeed, Player, PlayerShipTag,
+        PrimaryThrustMagnitude, ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
+    },
+    utils::Heading,
+    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
+    DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
+    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
+    INIT_ASTEROID_MOVESPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED,
+    INIT_SHIP_TURN_RATE, LARGE_ASTEROID_R, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL,
+    SMALL_ASTEROID_R, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -31,6 +39,7 @@ pub struct PlayerShip<M: Material2d> {
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
+    tag: PlayerShipTag,
 }
 
 impl<M: Material2d> PlayerShip<M> {
@@ -79,6 +88,7 @@ impl<M: Material2d> PlayerShip<M> {
                     linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
                     angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
                 },
+                tag: PlayerShipTag,
             },
             (
                 ProjectileEmitterBundle::new(
@@ -91,70 +101,6 @@ impl<M: Material2d> PlayerShip<M> {
                 Thruster::default(),
             ),
         )
-    }
-}
-
-#[derive(Bundle)]
-pub struct Asteroid<M: Material2d> {
-    mesh_bundle: MaterialMesh2dBundle<M>,
-    rigidbody: RigidBody,
-    collider: Collider,
-    collision_events: ActiveEvents,
-    velocity: Velocity,
-    health: Health,
-    damage: Damage,
-    gravity: GravityScale,
-}
-
-impl<M: Material2d> Asteroid<M> {
-    pub fn new(
-        x: f32,
-        y: f32,
-        r: f32,
-        mesh: Handle<Mesh>,
-        material: Handle<M>,
-        heading: Option<Heading>,
-        speed: Option<Speed>,
-        damage: Option<i32>,
-    ) -> Self {
-        let mut rng = rand::thread_rng();
-        let angvel = (rng.gen::<f32>() * 0.1) - 0.05;
-        let speed = match speed {
-            Some(x) => x,
-            None => INIT_ASTEROID_MOVE_SPEED,
-        };
-        let damage = match damage {
-            Some(x) => Damage(x),
-            None => Damage(INIT_ASTEROID_DAMAGE),
-        };
-        let heading = match heading {
-            Some(x) => x,
-            None => Heading::default(),
-        };
-        Self {
-            mesh_bundle: MaterialMesh2dBundle {
-                mesh: mesh.into(),
-                material,
-                transform: Transform {
-                    translation: Vec3::new(x, y, 2.),
-                    rotation: heading.into(),
-                    scale: Vec2::splat(1.).extend(1.),
-                    ..default()
-                },
-                ..default()
-            },
-            rigidbody: RigidBody::Dynamic,
-            velocity: Velocity {
-                linvel: heading.linvel(speed),
-                angvel,
-            },
-            damage,
-
-            collider: Collider::ball(r),
-            collision_events: ActiveEvents::COLLISION_EVENTS,
-            health: Health(INIT_ASTEROID_HEALTH),
-            gravity: GravityScale(0.),
-        }
     }
 }
 
@@ -206,7 +152,6 @@ impl Default for Boxoid {
         }
     }
 }
-
 
 #[derive(Bundle)]
 pub struct Particle {
@@ -436,4 +381,50 @@ impl Default for Thruster {
     fn default() -> Self {
         Self(DEFAULT_THRUST_FORCE_MAGNITUDE)
     }
+}
+
+pub fn gen_asteroid(
+    size: AsteroidSizes,
+    n_sides: usize,
+    mesh_handles: Vec<Handle<Mesh>>,
+    material_handles: Vec<Handle<ColorMaterial>>,
+    x: f32,
+    y: f32,
+    velocity: Velocity,
+) -> Asteroid<ColorMaterial> {
+    let r = match size {
+        AsteroidSizes::Small => SMALL_ASTEROID_R,
+        AsteroidSizes::Medium => MEDIUM_ASTEROID_R,
+        AsteroidSizes::Large => LARGE_ASTEROID_R,
+    };
+    let handle_mesh = match r {
+        SMALL_ASTEROID_R => match n_sides {
+            5 => mesh_handles[0].clone(),
+            6 => mesh_handles[1].clone(),
+            8 => mesh_handles[2].clone(),
+            _ => mesh_handles[0].clone(),
+        },
+        MEDIUM_ASTEROID_R => match n_sides {
+            5 => mesh_handles[3].clone(),
+            6 => mesh_handles[4].clone(),
+            8 => mesh_handles[5].clone(),
+            _ => mesh_handles[0].clone(),
+        },
+        LARGE_ASTEROID_R => match n_sides {
+            5 => mesh_handles[6].clone(),
+            6 => mesh_handles[7].clone(),
+            8 => mesh_handles[8].clone(),
+            _ => mesh_handles[0].clone(),
+        },
+        _ => mesh_handles[0].clone(),
+    };
+    Asteroid::new(
+        handle_mesh,
+        material_handles[0].clone(),
+        r,
+        x,
+        y,
+        Some(velocity),
+        None,
+    )
 }

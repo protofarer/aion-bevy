@@ -2,10 +2,13 @@
 
 use std::f32::consts::PI;
 
-use audio::{ProjectileEmitSound, ProjectileImpactSound, ShipThrustSound};
+use audio::{
+    AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound, ShipDamagedSound,
+    ShipThrustSound, ShipThrustSoundStopwatch,
+};
 use lazy_static::lazy_static;
 
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, time::Stopwatch};
 use bevy_vector_shapes::Shape2dPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
 use play::setup_play;
@@ -19,7 +22,6 @@ mod components;
 mod fps;
 mod physics;
 mod play;
-mod systems;
 mod utils;
 
 pub type Speed = f32;
@@ -63,7 +65,7 @@ const INIT_SHIP_HEALTH: i32 = 3;
 const INIT_SHIP_PROJECTILE_SPEED: f32 = 500.;
 
 // Asteroid
-const INIT_ASTEROID_MOVE_SPEED: Speed = 300.;
+const INIT_ASTEROID_MOVESPEED: Speed = 300.;
 const INIT_ASTEROID_HEALTH: i32 = 1;
 const INIT_ASTEROID_DAMAGE: i32 = 1;
 const SMALL_ASTEROID_R: f32 = 15.;
@@ -91,18 +93,33 @@ fn main() {
         .run();
 }
 
-pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
     commands.spawn(Camera2dBundle::default());
+
+    commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
 
     // let background_music = asset_server.load("sounds/Windless Slopes.ogg");
     // commands.insert_resource(BackgroundMusic(background_music));
 
     let light_shot_sound = asset_server.load("sounds/light_shot.wav");
     commands.insert_resource(ProjectileEmitSound(light_shot_sound));
+
     let ship_thrust_sound = asset_server.load("sounds/thrust.wav");
     commands.insert_resource(ShipThrustSound(ship_thrust_sound));
-    let tmp_collision_sound = asset_server.load("sounds/scratch.wav");
-    commands.insert_resource(ProjectileImpactSound(tmp_collision_sound));
+
+    let projectile_impact_sound = asset_server.load("sounds/scratch.wav");
+    commands.insert_resource(ProjectileImpactSound(projectile_impact_sound));
+
+    let destroy_asteroid_sound = asset_server.load("sounds/destroy_asteroid.wav");
+    commands.insert_resource(AsteroidDestroyedSound(destroy_asteroid_sound));
+
+    let damage_ship_sound = asset_server.load("sounds/ship_damage.wav");
+    commands.insert_resource(ShipDamagedSound(damage_ship_sound));
 
     // commands.insert_resource(ProjectileEmitSound());
     // commands.insert_resource(ShipThrustSound());
@@ -112,6 +129,29 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     // commands.insert_resource(AsteroidImpactSound());
     // commands.insert_resource(ShipDamagedSound());
     // commands.insert_resource(ShipImpactSound());
+
+    let handle_playership_mesh = meshes.add(Triangle2d::new(
+        Vec2::new(-15., -15.),
+        Vec2::X * 22.,
+        Vec2::new(-15., 15.),
+    ));
+    commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
+
+    let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
+    commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
+
+    let asteroid_material_handle = materials.add(Color::GRAY);
+    commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material_handle]));
+
+    let mut asteroid_mesh_handles = vec![];
+    for n_sides in [5, 6, 8] {
+        for r in [SMALL_ASTEROID_R, MEDIUM_ASTEROID_R, LARGE_ASTEROID_R] {
+            let handle_mesh = meshes.add(RegularPolygon::new(r, n_sides));
+            asteroid_mesh_handles.push(handle_mesh);
+            // ???
+        }
+    }
+    commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
     // let wall_collision_sound = asset_server.load("sounds/breakout_collision.ogg");
     // let paddle_collision_sound = asset_server.load("sounds/med_shoot.wav");
@@ -138,3 +178,15 @@ enum GameState {
     Match,
     End,
 }
+
+#[derive(Resource)]
+pub struct AsteroidMeshHandles(Vec<Handle<Mesh>>);
+
+#[derive(Resource)]
+pub struct AsteroidMaterialHandles(Vec<Handle<ColorMaterial>>);
+
+#[derive(Resource)]
+pub struct PlayerShipMeshHandle(Handle<Mesh>);
+
+#[derive(Resource)]
+pub struct PlayerShipMaterialHandle(Handle<ColorMaterial>);

@@ -75,7 +75,9 @@ impl Default for MoveSpeed {
 #[derive(Component)]
 pub struct ScoreboardUi;
 
+#[derive(Default)]
 pub enum FireTypes {
+    #[default]
     Primary,
     Secondary,
 }
@@ -135,9 +137,15 @@ impl Default for ProjectileEmission {
     }
 }
 
-#[derive(Resource)]
+#[derive(Resource, Default)]
 pub struct Score(pub usize);
 
 // MARKERS
 #[derive(Component)]
 pub struct ProjectileTag;
+
+#[derive(Component)]
+pub struct AsteroidTag;
+
+#[derive(Component)]
+pub struct PlayerShipTag;

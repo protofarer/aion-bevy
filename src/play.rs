@@ -6,17 +6,21 @@ use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
+use crate::archetypes::AsteroidSizes;
 use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
+use crate::avatars::gen_asteroid;
 use crate::components::{
     FireType, FireTypes, Player, ProjectileEmission, ProjectileTag, Score, ScoreboardUi, TurnRate,
 };
 use crate::{
-    avatars::{Asteroid, PlayerShip, Projectile},
+    avatars::{PlayerShip, Projectile},
     utils::Heading,
     GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
 };
 use crate::{
-    DEFAULT_ROTATION, LABEL_COLOR, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR,
+    AsteroidMaterialHandles, AsteroidMeshHandles, PlayerShipMaterialHandle, PlayerShipMeshHandle,
+    DEFAULT_ROTATION, LABEL_COLOR, LARGE_ASTEROID_R, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING,
+    SCORE_COLOR, SMALL_ASTEROID_R,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -50,30 +54,37 @@ pub fn setup_play(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    // bg_music: Res<BackgroundMusic>,
+    asteroid_mesh_handles: Res<AsteroidMeshHandles>,
+    asteroid_material_handles: Res<AsteroidMaterialHandles>,
+    playership_mesh_handle: Res<PlayerShipMeshHandle>,
+    playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
 ) {
-    commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
-
-    let handle_playership_mesh = meshes.add(Triangle2d::new(
-        Vec2::new(-15., -15.),
-        Vec2::X * 22.,
-        Vec2::new(-15., 15.),
-    ));
-    let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
-
+    let _ = playership_material_handle;
     let (ship, children) = PlayerShip::new(
         0.,
         0.,
         None,
-        handle_playership_mesh,
-        handle_playership_colormaterial,
+        playership_mesh_handle.0.clone(),
+        playership_material_handle.0.clone(),
     );
     commands.spawn(ship).with_children(|parent| {
         parent.spawn(children);
     });
 
-    // Asteroids
-    let handle_asteroid_colormaterial = materials.add(Color::GRAY);
+    gen_asteroid(
+        AsteroidSizes::Medium,
+        5,
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        100.,
+        100.,
+        Velocity {
+            linvel: Heading(PI / 4.).linvel(100.),
+            angvel: 0.5,
+        },
+    );
+
+    // spawn for test
     // let n = 15.;
     // let dx = (RIGHT_WALL - LEFT_WALL) / n;
     // let mut i = 0;
@@ -91,29 +102,8 @@ pub fn setup_play(
     //         i += 1;
     //     }
     // }
-    let handle_polygon = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
-    commands.spawn(Asteroid::new(
-        -400.,
-        0.,
-        MEDIUM_ASTEROID_R,
-        handle_polygon.clone(),
-        handle_asteroid_colormaterial.clone(),
-        None,
-        None,
-        None,
-    ));
 
-    // commands.spawn(Asteroid::new(
-    //     200.,
-    //     -50.,
-    //     MEDIUM_ASTEROID_R,
-    //     handle_polygon.clone(),
-    //     handle_asteroid_colormaterial.clone(),
-    //     Some(Heading::from_angle(-PI / 2.)),
-    //     Some(500.),
-    //     None,
-    // ));
-
+    let handle_mesh_asteroid_med_5 = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
     commands.spawn((
         ScoreboardUi,
         TextBundle::from_sections([

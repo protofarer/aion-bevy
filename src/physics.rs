@@ -4,9 +4,12 @@ use bevy::prelude::*;
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    audio::{ProjectileImpactSound, ShipThrustSound, ShipThrustSoundStopwatch},
+    audio::{
+        AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound, ShipDamagedSound,
+        ShipThrustSound, ShipThrustSoundStopwatch,
+    },
     avatars::Thruster,
-    components::{Player, ProjectileTag},
+    components::{AsteroidTag, Health, Player, PlayerShipTag, ProjectileTag},
     utils::Heading,
 };
 
@@ -86,7 +89,11 @@ fn handle_projectile_collision_events(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     collision_sound: Res<ProjectileImpactSound>,
-    projectile_query: Query<&ProjectileTag>
+    damage_ship_sound: Res<ShipDamagedSound>,
+    destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
+    projectile_query: Query<&ProjectileTag>,
+    ship_query: Query<&PlayerShipTag>,
+    asteroid_query: Query<&mut Health, With<AsteroidTag>>,
 ) {
     for event in collision_events.read() {
         match event {
@@ -96,6 +103,36 @@ fn handle_projectile_collision_events(
                         source: collision_sound.0.clone(),
                         settings: PlaybackSettings::DESPAWN,
                     });
+
+                    let asteroid_id = if asteroid_query.get(*ent_a).is_ok() {
+                        Some(ent_a)
+                    } else if asteroid_query.get(*ent_b).is_ok() {
+                        Some(ent_b)
+                    } else {
+                        None
+                    };
+
+                    if let Some(asteroid_id) = asteroid_id {
+                        // TODO if asteroid hits <= 0
+                        // reduce asteroid hp
+                        // if <= 0, destroy
+                        // play destroy sound
+
+                        commands.spawn(AudioBundle {
+                            source: destroy_asteroid_sound.0.clone(),
+                            settings: PlaybackSettings::DESPAWN,
+                        });
+                    }
+                    if (ship_query.get(*ent_a).is_ok() || ship_query.get(*ent_b).is_ok())
+                        || (asteroid_query.get(*ent_a).is_ok()
+                            || asteroid_query.get(*ent_b).is_ok())
+                    {
+                        // TODO ship hp
+                        commands.spawn(AudioBundle {
+                            source: damage_ship_sound.0.clone(),
+                            settings: PlaybackSettings::DESPAWN,
+                        });
+                    }
                 }
             }
             _ => {}
