@@ -1,21 +1,21 @@
 use std::f32::consts::PI;
 
 use bevy::prelude::*;
+use bevy::sprite::Material2d;
 use bevy::time::Stopwatch;
 use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
-use crate::archetypes::AsteroidSizes;
+use crate::archetypes::{gen_playership, AsteroidSizes, PlayerShip, ProjectileBundle};
 use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
 use crate::avatars::gen_asteroid;
 use crate::components::{
-    FireType, FireTypes, Player, ProjectileEmission, ProjectileTag, Score, ScoreboardUi, TurnRate,
+    FireType, FireTypes, Player, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
+    ScoreboardUi, TurnRate,
 };
 use crate::{
-    avatars::{PlayerShip, Projectile},
-    utils::Heading,
-    GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
+    utils::Heading, GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
 };
 use crate::{
     AsteroidMaterialHandles, AsteroidMeshHandles, PlayerShipMaterialHandle, PlayerShipMeshHandle,
@@ -27,7 +27,7 @@ pub fn play_plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            move_ship, wraparound,
+            ship_turn, wraparound,
             ship_fire,
             // check_for_collisions,
             // play_collision_sound,
@@ -59,13 +59,12 @@ pub fn setup_play(
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
 ) {
-    let _ = playership_material_handle;
-    let (ship, children) = PlayerShip::new(
+    let (ship, children) = gen_playership(
+        playership_mesh_handle.0.clone(),
+        playership_material_handle.0.clone(),
         0.,
         0.,
         None,
-        playership_mesh_handle.0.clone(),
-        playership_material_handle.0.clone(),
     );
     commands.spawn(ship).with_children(|parent| {
         parent.spawn(children);
@@ -168,9 +167,9 @@ pub fn draw_boundary(mut painter: ShapePainter) {
     );
 }
 
-pub fn move_ship(
+pub fn ship_turn(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &TurnRate), With<Player>>,
+    mut query: Query<(&mut Transform, &TurnRate), With<PlayerShipTag>>,
     time: Res<Time>,
 ) {
     for (mut transform, turnrate) in query.iter_mut() {
@@ -215,7 +214,7 @@ pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
 pub fn ship_fire(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<&Children, With<Player>>,
+    mut q_ship: Query<&Children, With<PlayerShipTag>>,
     mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
     fire_sound: Res<ProjectileEmitSound>,
 ) {
@@ -236,7 +235,7 @@ pub fn ship_fire(
                                 let (_scale, rotation, translation) =
                                     global_transform.to_scale_rotation_translation();
 
-                                commands.spawn(Projectile::new(
+                                commands.spawn(ProjectileBundle::new(
                                     translation.x,
                                     translation.y,
                                     Some(rotation.into()),

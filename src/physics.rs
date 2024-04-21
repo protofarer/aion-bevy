@@ -44,7 +44,7 @@ pub fn setup_physics(mut commands: Commands) {
 pub fn apply_forces_ship(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<(&Children, &mut ExternalForce, &Transform), With<Player>>,
+    mut q_ship: Query<(&Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
     mut q_thruster: Query<&Thruster>,
     thrust_sound: Res<ShipThrustSound>,
     mut thrust_sound_stopwatch: ResMut<ShipThrustSoundStopwatch>,

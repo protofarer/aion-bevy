@@ -41,7 +41,7 @@ const TOP_WALL: f32 = 432.;
 // General
 const DEFAULT_MOVESPEED: Speed = 100.;
 const DEFAULT_HEALTH: i32 = 1;
-const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 25;
+const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 100;
 lazy_static! {
     static ref DEFAULT_HEADING: Heading = Heading(0.);
     static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(0.);
@@ -63,6 +63,8 @@ const INIT_SHIP_MOVE_SPEED: Speed = 300.;
 const INIT_SHIP_TURN_RATE: TurnSpeed = 5.;
 const INIT_SHIP_HEALTH: i32 = 3;
 const INIT_SHIP_PROJECTILE_SPEED: f32 = 500.;
+const SHIP_LENGTH: f32 = 22.;
+const SHIP_HALF_WIDTH: f32 = 15.;
 
 // Asteroid
 const INIT_ASTEROID_MOVESPEED: Speed = 300.;
@@ -131,9 +133,9 @@ pub fn setup(
     // commands.insert_resource(ShipImpactSound());
 
     let handle_playership_mesh = meshes.add(Triangle2d::new(
-        Vec2::new(-15., -15.),
-        Vec2::X * 22.,
-        Vec2::new(-15., 15.),
+        Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
+        Vec2::X * SHIP_LENGTH,
+        Vec2::new(-SHIP_HALF_WIDTH, SHIP_HALF_WIDTH),
     ));
     commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
 

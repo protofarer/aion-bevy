@@ -9,7 +9,7 @@ use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
 use crate::{
-    archetypes::{Asteroid, AsteroidSizes},
+    archetypes::{AsteroidBundle, AsteroidSizes},
     components::{
         AsteroidTag, Damage, FireType, FireTypes, Health, MoveSpeed, Player, PlayerShipTag,
         PrimaryThrustMagnitude, ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
@@ -24,14 +24,12 @@ use crate::{
 };
 
 #[derive(Bundle)]
-pub struct PlayerShip<M: Material2d> {
+pub struct Ship<M: Material2d> {
     mesh_bundle: MaterialMesh2dBundle<M>,
-    move_speed: MoveSpeed,
     turn_rate: TurnRate,
     collider: Collider,
     collision_events: ActiveEvents,
     health: Health,
-    player: Player,
     rigidbody: RigidBody,
     velocity: Velocity,
     primary_thrust_force: ExternalForce,
@@ -39,10 +37,9 @@ pub struct PlayerShip<M: Material2d> {
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
-    tag: PlayerShipTag,
 }
 
-impl<M: Material2d> PlayerShip<M> {
+impl<M: Material2d> Ship<M> {
     pub fn new(
         x: f32,
         y: f32,
@@ -69,8 +66,6 @@ impl<M: Material2d> PlayerShip<M> {
                 ),
                 collision_events: ActiveEvents::COLLISION_EVENTS,
                 health: Health(INIT_SHIP_HEALTH),
-                player: Player::A,
-                move_speed: MoveSpeed(INIT_SHIP_MOVE_SPEED),
                 turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
                 rigidbody: RigidBody::Dynamic,
                 velocity: Velocity {
@@ -88,7 +83,6 @@ impl<M: Material2d> PlayerShip<M> {
                     linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
                     angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
                 },
-                tag: PlayerShipTag,
             },
             (
                 ProjectileEmitterBundle::new(
@@ -101,218 +95,6 @@ impl<M: Material2d> PlayerShip<M> {
                 Thruster::default(),
             ),
         )
-    }
-}
-
-#[derive(Bundle)]
-pub struct Boxoid {
-    sprite: SpriteBundle,
-    collider: Collider,
-    health: Health,
-}
-
-impl Boxoid {
-    pub fn new(x: f32, y: f32, half_x: f32, half_y: f32) -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    scale: Vec3::new(half_x * 2., half_y * 2., 0.0),
-                    rotation: *DEFAULT_ROTATION,
-                },
-                sprite: Sprite {
-                    color: Color::ORANGE_RED,
-                    ..default()
-                },
-                ..default()
-            },
-            collider: Collider::cuboid(half_x, half_y),
-            health: Health(1),
-        }
-    }
-}
-
-impl Default for Boxoid {
-    fn default() -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(
-                        LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                        BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                        0.,
-                    ),
-                    scale: Vec3::new(50., 50., 0.0),
-                    rotation: *DEFAULT_ROTATION,
-                },
-                ..default()
-            },
-            collider: Collider::cuboid(25., 25.),
-            health: Health(1),
-        }
-    }
-}
-
-#[derive(Bundle)]
-pub struct Particle {
-    sprite: SpriteBundle,
-    velocity: Velocity,
-    transient_existence: TransientExistence,
-}
-
-impl Particle {
-    pub fn new(
-        x: f32,
-        y: f32,
-        heading: Option<Heading>,
-        move_speed: Option<Speed>,
-        color: Option<Color>,
-        duration: Option<Duration>,
-    ) -> Self {
-        let move_speed = match move_speed {
-            Some(x) => x,
-            None => DEFAULT_MOVESPEED,
-        };
-        let transient_existence = match duration {
-            Some(x) => TransientExistence::new(x),
-            None => TransientExistence::default(),
-        };
-        let heading = match heading {
-            Some(x) => x,
-            None => Heading::default(),
-        };
-
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(x, y, 0.),
-                    rotation: heading.into(),
-                    ..default()
-                },
-                sprite: Sprite {
-                    color: color.unwrap_or_default(),
-                    ..default()
-                },
-                ..default()
-            },
-            velocity: Velocity {
-                linvel: heading.linvel(move_speed),
-                ..default()
-            },
-            transient_existence,
-        }
-    }
-}
-
-impl Default for Particle {
-    fn default() -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(
-                        LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                        BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                        0.,
-                    ),
-                    rotation: *DEFAULT_ROTATION,
-                    ..default()
-                },
-                ..default()
-            },
-            velocity: Velocity::default(),
-            transient_existence: TransientExistence::default(),
-        }
-    }
-}
-
-#[derive(Bundle)]
-pub struct Projectile {
-    sprite: SpriteBundle,
-    damage: Damage,
-    transient_existence: TransientExistence,
-    rigidbody: RigidBody,
-    collider: Collider,
-    collision_events: ActiveEvents,
-    velocity: Velocity,
-    restitution: Restitution,
-    gravity: GravityScale,
-    mass: AdditionalMassProperties,
-    tag: ProjectileTag,
-}
-
-impl Projectile {
-    pub fn new(
-        x: f32,
-        y: f32,
-        heading: Option<Heading>,
-        projectile_speed: Option<Speed>,
-        color: Option<Color>,
-        damage: Option<i32>,
-        duration: Option<Duration>,
-        restitution_coeff: Option<f32>,
-        gravity_scale: Option<f32>,
-        tag: ProjectileTag,
-    ) -> Self {
-        let projectile_speed = match projectile_speed {
-            Some(x) => x,
-            None => INIT_SHIP_PROJECTILE_SPEED,
-        };
-
-        let particle = Particle::new(x, y, heading, Some(projectile_speed), color, None);
-        let sprite = particle.sprite;
-        let velocity = particle.velocity;
-
-        let damage = match damage {
-            Some(x) => Damage(x),
-            None => Damage::default(),
-        };
-        let transient_existence = match duration {
-            Some(x) => TransientExistence::new(x),
-            None => TransientExistence::default(),
-        };
-        let restitution = match restitution_coeff {
-            Some(x) => Restitution::coefficient(x),
-            None => Restitution::coefficient(DEFAULT_RESTITUTION),
-        };
-        let gravity = match gravity_scale {
-            Some(x) => GravityScale(x),
-            None => GravityScale(0.),
-        };
-
-        Self {
-            sprite,
-            rigidbody: RigidBody::Dynamic,
-            collider: Collider::ball(0.5),
-            collision_events: ActiveEvents::COLLISION_EVENTS,
-            damage,
-            transient_existence,
-            velocity,
-            restitution,
-            gravity,
-            mass: AdditionalMassProperties::Mass(100.),
-            tag: ProjectileTag,
-        }
-    }
-}
-
-impl Default for Projectile {
-    fn default() -> Self {
-        let particle = Particle::new(0., 0., None, None, None, None);
-        let sprite = particle.sprite;
-        let velocity = particle.velocity;
-        Self {
-            sprite,
-            damage: Damage::default(),
-            transient_existence: TransientExistence::default(),
-            rigidbody: RigidBody::Dynamic,
-            collider: Collider::ball(1.),
-            collision_events: ActiveEvents::COLLISION_EVENTS,
-            velocity,
-            restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
-            gravity: GravityScale(0.),
-            mass: AdditionalMassProperties::Mass(100.),
-            tag: ProjectileTag,
-        }
     }
 }
 
@@ -391,7 +173,7 @@ pub fn gen_asteroid(
     x: f32,
     y: f32,
     velocity: Velocity,
-) -> Asteroid<ColorMaterial> {
+) -> AsteroidBundle<ColorMaterial> {
     let r = match size {
         AsteroidSizes::Small => SMALL_ASTEROID_R,
         AsteroidSizes::Medium => MEDIUM_ASTEROID_R,
@@ -418,7 +200,7 @@ pub fn gen_asteroid(
         },
         _ => mesh_handles[0].clone(),
     };
-    Asteroid::new(
+    AsteroidBundle::new(
         handle_mesh,
         material_handles[0].clone(),
         r,
