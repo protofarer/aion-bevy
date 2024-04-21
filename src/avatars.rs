@@ -17,15 +17,16 @@ use crate::{
     utils::Heading,
     Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
     DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
-    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_HEALTH,
-    INIT_ASTEROID_MOVESPEED, INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED,
-    INIT_SHIP_TURN_RATE, LARGE_ASTEROID_R, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL,
-    SMALL_ASTEROID_R, TOP_WALL,
+    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED,
+    INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_RESTITUTION,
+    INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R, LEFT_WALL,
+    MEDIUM_ASTEROID_HEALTH, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
+    TOP_WALL,
 };
 
 #[derive(Bundle)]
-pub struct Ship<M: Material2d> {
-    mesh_bundle: MaterialMesh2dBundle<M>,
+pub struct PlayerShip {
+    mesh_bundle: MaterialMesh2dBundle<ColorMaterial>,
     turn_rate: TurnRate,
     collider: Collider,
     collision_events: ActiveEvents,
@@ -37,65 +38,65 @@ pub struct Ship<M: Material2d> {
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
+    tag: PlayerShipTag,
 }
 
-impl<M: Material2d> Ship<M> {
-    pub fn new(
-        x: f32,
-        y: f32,
-        heading: Option<Heading>,
-        mesh: Handle<Mesh>,
-        material: Handle<M>,
-    ) -> (Self, (ProjectileEmitterBundle, Thruster)) {
-        (
-            Self {
-                mesh_bundle: MaterialMesh2dBundle {
-                    mesh: mesh.into(),
-                    material,
-                    transform: Transform {
-                        translation: Vec3::new(x, y, 1.),
-                        rotation: heading.unwrap_or_default().into(),
-                        ..default()
-                    },
+pub fn gen_playership(
+    mesh_handle: Handle<Mesh>,
+    material_handle: Handle<ColorMaterial>,
+    x: f32,
+    y: f32,
+    heading: Option<Heading>,
+) -> (PlayerShip, (ProjectileEmitterBundle, Thruster)) {
+    (
+        PlayerShip {
+            mesh_bundle: MaterialMesh2dBundle {
+                mesh: mesh_handle.into(),
+                material: material_handle.into(),
+                transform: Transform {
+                    translation: Vec3::new(x, y, 1.),
+                    rotation: heading.unwrap_or_default().into(),
                     ..default()
                 },
-                collider: Collider::triangle(
-                    Vec2::new(-15., -15.),
-                    Vec2::X * 22.,
-                    Vec2::new(-15., 15.),
-                ),
-                collision_events: ActiveEvents::COLLISION_EVENTS,
-                health: Health(INIT_SHIP_HEALTH),
-                turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
-                rigidbody: RigidBody::Dynamic,
-                velocity: Velocity {
-                    linvel: Vec2::ZERO,
-                    angvel: 0.,
-                },
-                primary_thrust_force: ExternalForce {
-                    force: Vec2::ZERO,
-                    torque: 0.,
-                },
-                primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
-                restitution: Restitution::coefficient(0.7),
-                gravity: GravityScale(0.),
-                damping: Damping {
-                    linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-                    angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
-                },
+                ..default()
             },
-            (
-                ProjectileEmitterBundle::new(
-                    22.,
-                    heading.unwrap_or_default(),
-                    Some(FireType {
-                        fire_type: FireTypes::Primary,
-                    }),
-                ),
-                Thruster::default(),
+            collider: Collider::triangle(
+                Vec2::new(-15., -15.),
+                Vec2::X * 22.,
+                Vec2::new(-15., 15.),
             ),
-        )
-    }
+            collision_events: ActiveEvents::COLLISION_EVENTS,
+            health: Health(INIT_SHIP_HEALTH),
+            turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
+            rigidbody: RigidBody::Dynamic,
+            velocity: Velocity {
+                linvel: Vec2::ZERO,
+                angvel: 0.,
+            },
+            primary_thrust_force: ExternalForce {
+                force: Vec2::ZERO,
+                torque: 0.,
+            },
+            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
+            restitution: Restitution::coefficient(INIT_SHIP_RESTITUTION),
+            gravity: GravityScale(0.),
+            damping: Damping {
+                linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+                angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+            },
+            tag: PlayerShipTag,
+        },
+        (
+            ProjectileEmitterBundle::new(
+                22.,
+                heading.unwrap_or_default(),
+                Some(FireType {
+                    fire_type: FireTypes::Primary,
+                }),
+            ),
+            Thruster::default(),
+        ),
+    )
 }
 
 #[derive(Bundle)]
@@ -179,26 +180,35 @@ pub fn gen_asteroid(
         AsteroidSizes::Medium => MEDIUM_ASTEROID_R,
         AsteroidSizes::Large => LARGE_ASTEROID_R,
     };
-    let handle_mesh = match r {
-        SMALL_ASTEROID_R => match n_sides {
-            5 => mesh_handles[0].clone(),
-            6 => mesh_handles[1].clone(),
-            8 => mesh_handles[2].clone(),
-            _ => mesh_handles[0].clone(),
-        },
-        MEDIUM_ASTEROID_R => match n_sides {
-            5 => mesh_handles[3].clone(),
-            6 => mesh_handles[4].clone(),
-            8 => mesh_handles[5].clone(),
-            _ => mesh_handles[0].clone(),
-        },
-        LARGE_ASTEROID_R => match n_sides {
-            5 => mesh_handles[6].clone(),
-            6 => mesh_handles[7].clone(),
-            8 => mesh_handles[8].clone(),
-            _ => mesh_handles[0].clone(),
-        },
-        _ => mesh_handles[0].clone(),
+    let (handle_mesh, health) = match r {
+        SMALL_ASTEROID_R => (
+            match n_sides {
+                5 => mesh_handles[0].clone(),
+                6 => mesh_handles[3].clone(),
+                8 => mesh_handles[6].clone(),
+                _ => mesh_handles[0].clone(),
+            },
+            SMALL_ASTEROID_HEALTH,
+        ),
+        MEDIUM_ASTEROID_R => (
+            match n_sides {
+                5 => mesh_handles[1].clone(),
+                6 => mesh_handles[4].clone(),
+                8 => mesh_handles[7].clone(),
+                _ => mesh_handles[0].clone(),
+            },
+            MEDIUM_ASTEROID_HEALTH,
+        ),
+        LARGE_ASTEROID_R => (
+            match n_sides {
+                5 => mesh_handles[2].clone(),
+                6 => mesh_handles[5].clone(),
+                8 => mesh_handles[8].clone(),
+                _ => mesh_handles[0].clone(),
+            },
+            LARGE_ASTEROID_HEALTH,
+        ),
+        _ => (mesh_handles[0].clone(), SMALL_ASTEROID_HEALTH),
     };
     AsteroidBundle::new(
         handle_mesh,
@@ -207,6 +217,7 @@ pub fn gen_asteroid(
         x,
         y,
         Some(velocity),
+        Some(health),
         None,
     )
 }

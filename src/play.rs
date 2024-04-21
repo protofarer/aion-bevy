@@ -7,9 +7,9 @@ use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
-use crate::archetypes::{gen_playership, AsteroidSizes, PlayerShip, ProjectileBundle};
+use crate::archetypes::{AsteroidSizes, ProjectileBundle};
 use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
-use crate::avatars::gen_asteroid;
+use crate::avatars::{gen_asteroid, gen_playership};
 use crate::components::{
     FireType, FireTypes, Player, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
     ScoreboardUi, TurnRate,
@@ -70,18 +70,19 @@ pub fn setup_play(
         parent.spawn(children);
     });
 
-    gen_asteroid(
+    let ast1 = gen_asteroid(
         AsteroidSizes::Medium,
         5,
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
-        100.,
-        100.,
+        200.,
+        0.,
         Velocity {
-            linvel: Heading(PI / 4.).linvel(100.),
+            linvel: Heading(0.).linvel(0.),
             angvel: 0.5,
         },
     );
+    commands.spawn(ast1);
 
     // spawn for test
     // let n = 15.;

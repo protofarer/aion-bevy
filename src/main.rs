@@ -4,7 +4,7 @@ use std::f32::consts::PI;
 
 use audio::{
     AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound, ShipDamagedSound,
-    ShipThrustSound, ShipThrustSoundStopwatch,
+    ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
 };
 use lazy_static::lazy_static;
 
@@ -63,16 +63,22 @@ const INIT_SHIP_MOVE_SPEED: Speed = 300.;
 const INIT_SHIP_TURN_RATE: TurnSpeed = 5.;
 const INIT_SHIP_HEALTH: i32 = 3;
 const INIT_SHIP_PROJECTILE_SPEED: f32 = 500.;
+const INIT_SHIP_RESTITUTION: f32 = 0.9;
 const SHIP_LENGTH: f32 = 22.;
 const SHIP_HALF_WIDTH: f32 = 15.;
 
 // Asteroid
 const INIT_ASTEROID_MOVESPEED: Speed = 300.;
-const INIT_ASTEROID_HEALTH: i32 = 1;
 const INIT_ASTEROID_DAMAGE: i32 = 1;
+
 const SMALL_ASTEROID_R: f32 = 15.;
+const SMALL_ASTEROID_HEALTH: i32 = 1;
+
 const MEDIUM_ASTEROID_R: f32 = 30.;
+const MEDIUM_ASTEROID_HEALTH: i32 = 3;
+
 const LARGE_ASTEROID_R: f32 = 50.;
+const LARGE_ASTEROID_HEALTH: i32 = 5;
 
 fn main() {
     App::new()
@@ -123,14 +129,8 @@ pub fn setup(
     let damage_ship_sound = asset_server.load("sounds/ship_damage.wav");
     commands.insert_resource(ShipDamagedSound(damage_ship_sound));
 
-    // commands.insert_resource(ProjectileEmitSound());
-    // commands.insert_resource(ShipThrustSound());
-    // commands.insert_resource(ProjectileImpactSound());
-    // commands.insert_resource(AsteroidDamagedSound());
-    // commands.insert_resource(AsteroidDestroyedSound());
-    // commands.insert_resource(AsteroidImpactSound());
-    // commands.insert_resource(ShipDamagedSound());
-    // commands.insert_resource(ShipImpactSound());
+    let destroy_ship_sound = asset_server.load("sounds/human_physical_death.wav");
+    commands.insert_resource(ShipDestroyedSound(destroy_ship_sound));
 
     let handle_playership_mesh = meshes.add(Triangle2d::new(
         Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),

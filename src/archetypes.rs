@@ -20,14 +20,14 @@ use crate::{
     },
     utils::Heading,
     Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE,
-    INIT_ASTEROID_HEALTH, INIT_ASTEROID_MOVESPEED, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED,
-    INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE,
+    INIT_ASTEROID_MOVESPEED, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE,
+    LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
-pub struct PlayerShip {
-    mesh_bundle: MaterialMesh2dBundle<ColorMaterial>,
+pub struct Ship<M: Material2d> {
+    mesh_bundle: MaterialMesh2dBundle<M>,
     turn_rate: TurnRate,
     collider: Collider,
     collision_events: ActiveEvents,
@@ -39,65 +39,65 @@ pub struct PlayerShip {
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
-    tag: PlayerShipTag,
 }
 
-pub fn gen_playership(
-    mesh_handle: Handle<Mesh>,
-    material_handle: Handle<ColorMaterial>,
-    x: f32,
-    y: f32,
-    heading: Option<Heading>,
-) -> (PlayerShip, (ProjectileEmitterBundle, Thruster)) {
-    (
-        PlayerShip {
-            mesh_bundle: MaterialMesh2dBundle {
-                mesh: mesh_handle.into(),
-                material: material_handle.into(),
-                transform: Transform {
-                    translation: Vec3::new(x, y, 1.),
-                    rotation: heading.unwrap_or_default().into(),
+impl<M: Material2d> Ship<M> {
+    pub fn new(
+        x: f32,
+        y: f32,
+        heading: Option<Heading>,
+        mesh: Handle<Mesh>,
+        material: Handle<M>,
+    ) -> (Self, (ProjectileEmitterBundle, Thruster)) {
+        (
+            Self {
+                mesh_bundle: MaterialMesh2dBundle {
+                    mesh: mesh.into(),
+                    material,
+                    transform: Transform {
+                        translation: Vec3::new(x, y, 1.),
+                        rotation: heading.unwrap_or_default().into(),
+                        ..default()
+                    },
                     ..default()
                 },
-                ..default()
+                collider: Collider::triangle(
+                    Vec2::new(-15., -15.),
+                    Vec2::X * 22.,
+                    Vec2::new(-15., 15.),
+                ),
+                collision_events: ActiveEvents::COLLISION_EVENTS,
+                health: Health(INIT_SHIP_HEALTH),
+                turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
+                rigidbody: RigidBody::Dynamic,
+                velocity: Velocity {
+                    linvel: Vec2::ZERO,
+                    angvel: 0.,
+                },
+                primary_thrust_force: ExternalForce {
+                    force: Vec2::ZERO,
+                    torque: 0.,
+                },
+                primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
+                restitution: Restitution::coefficient(0.7),
+                gravity: GravityScale(0.),
+                damping: Damping {
+                    linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+                    angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+                },
             },
-            collider: Collider::triangle(
-                Vec2::new(-15., -15.),
-                Vec2::X * 22.,
-                Vec2::new(-15., 15.),
+            (
+                ProjectileEmitterBundle::new(
+                    22.,
+                    heading.unwrap_or_default(),
+                    Some(FireType {
+                        fire_type: FireTypes::Primary,
+                    }),
+                ),
+                Thruster::default(),
             ),
-            collision_events: ActiveEvents::COLLISION_EVENTS,
-            health: Health(INIT_SHIP_HEALTH),
-            turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
-            rigidbody: RigidBody::Dynamic,
-            velocity: Velocity {
-                linvel: Vec2::ZERO,
-                angvel: 0.,
-            },
-            primary_thrust_force: ExternalForce {
-                force: Vec2::ZERO,
-                torque: 0.,
-            },
-            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
-            restitution: Restitution::coefficient(0.7),
-            gravity: GravityScale(0.),
-            damping: Damping {
-                linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-                angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
-            },
-            tag: PlayerShipTag,
-        },
-        (
-            ProjectileEmitterBundle::new(
-                22.,
-                heading.unwrap_or_default(),
-                Some(FireType {
-                    fire_type: FireTypes::Primary,
-                }),
-            ),
-            Thruster::default(),
-        ),
-    )
+        )
+    }
 }
 
 #[derive(Bundle)]
@@ -290,6 +290,7 @@ impl<M: Material2d> AsteroidBundle<M> {
         x: f32,
         y: f32,
         velocity: Option<Velocity>,
+        health: Option<i32>,
         damage: Option<i32>,
     ) -> Self {
         let velocity = match velocity {
@@ -298,6 +299,10 @@ impl<M: Material2d> AsteroidBundle<M> {
                 linvel: Heading::default().linvel(INIT_ASTEROID_MOVESPEED),
                 ..default()
             },
+        };
+        let health = match health {
+            Some(x) => Health(x),
+            None => Health(DEFAULT_HEALTH),
         };
 
         let damage = match damage {
@@ -325,7 +330,7 @@ impl<M: Material2d> AsteroidBundle<M> {
             damage,
             collider: Collider::ball(r),
             collision_events: ActiveEvents::COLLISION_EVENTS,
-            health: Health(INIT_ASTEROID_HEALTH),
+            health,
             gravity: GravityScale(0.),
             tag: AsteroidTag,
         }
