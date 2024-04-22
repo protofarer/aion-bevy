@@ -13,16 +13,10 @@ use bevy_rapier2d::{
 use rand::Rng;
 
 use crate::{
-    avatars::{ProjectileEmitterBundle, Thruster},
-    components::{
+    avatars::{ProjectileEmitterBundle, Thruster}, components::{
         AsteroidTag, Damage, FireType, FireTypes, Health, PlayerShipTag, PrimaryThrustMagnitude,
         ProjectileTag, TransientExistence, TurnRate,
-    },
-    utils::Heading,
-    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE,
-    INIT_ASTEROID_MOVESPEED, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE,
-    LEFT_WALL, RIGHT_WALL, TOP_WALL,
+    }, utils::Heading, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL
 };
 
 #[derive(Bundle)]
@@ -272,6 +266,7 @@ pub struct AsteroidBundle<M: Material2d> {
     velocity: Velocity,
     health: Health,
     damage: Damage,
+    restitution: Restitution,
     gravity: GravityScale,
     tag: AsteroidTag,
 }
@@ -331,6 +326,7 @@ impl<M: Material2d> AsteroidBundle<M> {
             collider: Collider::ball(r),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             health,
+            restitution: Restitution::coefficient(INIT_ASTEROID_RESTITUTION),
             gravity: GravityScale(0.),
             tag: AsteroidTag,
         }

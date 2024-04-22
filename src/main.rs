@@ -3,8 +3,8 @@
 use std::f32::consts::PI;
 
 use audio::{
-    AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound, ShipDamagedSound,
-    ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
+    AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
+    ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
 };
 use lazy_static::lazy_static;
 
@@ -70,6 +70,7 @@ const SHIP_HALF_WIDTH: f32 = 15.;
 // Asteroid
 const INIT_ASTEROID_MOVESPEED: Speed = 300.;
 const INIT_ASTEROID_DAMAGE: i32 = 1;
+const INIT_ASTEROID_RESTITUTION: f32 = 0.3;
 
 const SMALL_ASTEROID_R: f32 = 15.;
 const SMALL_ASTEROID_HEALTH: i32 = 1;
@@ -131,6 +132,9 @@ pub fn setup(
 
     let destroy_ship_sound = asset_server.load("sounds/human_physical_death.wav");
     commands.insert_resource(ShipDestroyedSound(destroy_ship_sound));
+
+    let asteroid_clash_sound = asset_server.load("sounds/asteroid_clash.wav");
+    commands.insert_resource(AsteroidClashSound(asteroid_clash_sound));
 
     let handle_playership_mesh = meshes.add(Triangle2d::new(
         Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),

@@ -21,7 +21,7 @@ impl Heading {
         Vec2::new(x, y)
     }
     pub fn linvel(&self, speed: Speed) -> Vec2 {
-        Vec2::new(self.0.cos(), self.0.sin()) * speed
+        self.to_vec2() * speed
     }
 }
 
@@ -33,7 +33,7 @@ impl Default for Heading {
 
 impl Into<Quat> for Heading {
     fn into(self) -> Quat {
-        let angle_radians = self.0 * PI / 360.;
+        let angle_radians = self.0 * PI / 180.;
         Quat::from_rotation_z(angle_radians)
     }
 }
@@ -41,6 +41,6 @@ impl Into<Quat> for Heading {
 impl From<Quat> for Heading {
     fn from(quat: Quat) -> Self {
         let (z_rot, x_rot, y_rot) = quat.to_euler(EulerRot::ZXY);
-        Heading(z_rot)
+        Heading(z_rot * 180. / PI)
     }
 }

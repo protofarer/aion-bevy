@@ -15,8 +15,8 @@ pub struct ProjectileImpactSound(pub Handle<AudioSource>);
 #[derive(Resource)]
 pub struct AsteroidDestroyedSound(pub Handle<AudioSource>);
 
-// #[derive(Resource)]
-// pub struct AsteroidImpactSound(Handle<AudioSource>);
+#[derive(Resource)]
+pub struct AsteroidClashSound(pub Handle<AudioSource>);
 
 #[derive(Resource)]
 pub struct ShipDamagedSound(pub Handle<AudioSource>);

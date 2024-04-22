@@ -5,8 +5,8 @@ use bevy_rapier2d::prelude::*;
 
 use crate::{
     audio::{
-        AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound, ShipDamagedSound,
-        ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
+        AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
+        ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
     },
     avatars::Thruster,
     components::{AsteroidTag, Damage, Health, Player, PlayerShipTag, ProjectileTag},
@@ -92,6 +92,7 @@ fn handle_projectile_collision_events(
     damage_ship_sound: Res<ShipDamagedSound>,
     destroy_ship_sound: Res<ShipDestroyedSound>,
     destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
+    asteroid_clash_sound: Res<AsteroidClashSound>,
     q_proj: Query<
         &Damage,
         (
@@ -123,7 +124,7 @@ fn handle_projectile_collision_events(
                 let proj_a_result = q_proj.get(*ent_a);
                 let proj_b_result = q_proj.get(*ent_b);
 
-                if proj_a_result.is_ok() || proj_b_result.is_ok() {
+                if [proj_a_result, proj_b_result].iter().any(|x| x.is_ok()) {
                     commands.spawn(AudioBundle {
                         source: collision_sound.0.clone(),
                         settings: PlaybackSettings::DESPAWN,
@@ -252,6 +253,16 @@ fn handle_projectile_collision_events(
                 }
 
                 // aster-aster
+                {
+                    let aster_a_result = q_aster.get(*ent_a);
+                    let aster_b_result = q_aster.get(*ent_b);
+                    if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
+                        commands.spawn(AudioBundle {
+                            source: asteroid_clash_sound.0.clone(),
+                            settings: PlaybackSettings::DESPAWN,
+                        });
+                    }
+                }
             }
             _ => {}
         }
