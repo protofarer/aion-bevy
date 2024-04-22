@@ -65,8 +65,8 @@ pub fn apply_forces_ship(
             }
 
             let heading: Heading = transform.rotation.into();
-            ext_force.force.x += heading.0.cos() * sum_forces;
-            ext_force.force.y += heading.0.sin() * sum_forces;
+            ext_force.force.x += heading.x() * sum_forces;
+            ext_force.force.y += heading.y() * sum_forces;
 
             if thrust_sound_stopwatch.0.elapsed() >= Duration::from_secs_f32(0.3) {
                 thrust_sound_stopwatch.0.reset();

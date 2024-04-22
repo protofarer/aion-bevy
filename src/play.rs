@@ -84,33 +84,45 @@ pub fn setup_play(
     );
     commands.spawn(ast1);
 
-    let ast2 = gen_asteroid(
-        AsteroidSizes::Medium,
-        5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        -200.,
-        100.,
-        Velocity {
-            linvel: Heading(-90.).linvel(100.),
-            angvel: 0.,
-        },
-    );
-    commands.spawn(ast2);
-
-    let ast3 = gen_asteroid(
-        AsteroidSizes::Medium,
-        5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        -200.,
-        -100.,
-        Velocity {
-            linvel: Heading(90.).linvel(100.),
-            angvel: 0.,
-        },
-    );
-    commands.spawn(ast3);
+    // clashing asteroids
+    let start_x = LEFT_WALL + 50.;
+    let dx = 250.;
+    let y = TOP_WALL - 50.;
+    let separation_y = 150.;
+    let pairs = [
+        (AsteroidSizes::Small, AsteroidSizes::Small),
+        (AsteroidSizes::Small, AsteroidSizes::Medium),
+        (AsteroidSizes::Small, AsteroidSizes::Large),
+        (AsteroidSizes::Medium, AsteroidSizes::Medium),
+        (AsteroidSizes::Medium, AsteroidSizes::Large),
+        (AsteroidSizes::Large, AsteroidSizes::Large),
+    ];
+    for (i, (size_a, size_b)) in pairs.iter().enumerate() {
+        commands.spawn(gen_asteroid(
+            *size_a,
+            5,
+            asteroid_mesh_handles.0.clone(),
+            asteroid_material_handles.0.clone(),
+            start_x + (dx * i as f32),
+            y,
+            Velocity {
+                linvel: Heading(-90.).linvel(20.),
+                angvel: 0.,
+            },
+        ));
+        commands.spawn(gen_asteroid(
+            *size_b,
+            5,
+            asteroid_mesh_handles.0.clone(),
+            asteroid_material_handles.0.clone(),
+            start_x + (dx * i as f32),
+            y - separation_y,
+            Velocity {
+                linvel: Heading(90.).linvel(20.),
+                angvel: 0.,
+            },
+        ));
+    }
     // spawn for test
     // let n = 15.;
     // let dx = (RIGHT_WALL - LEFT_WALL) / n;
