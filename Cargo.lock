@@ -105,6 +105,7 @@ name = "aion-bevy"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "bevy_particle_systems",
  "bevy_rapier2d",
  "bevy_vector_shapes",
  "lazy_static",
@@ -738,6 +739,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a0d7ef7f2a826d0b19f059035831ce00a5e930435cc53c61e045773d0483f67a"
 dependencies = [
  "glam",
+]
+
+[[package]]
+name = "bevy_particle_systems"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0d70640cf8c0d30be4a8846443a4d94232b16faae87371a7e022611c3cac2f3a"
+dependencies = [
+ "bevy_app",
+ "bevy_asset",
+ "bevy_ecs",
+ "bevy_hierarchy",
+ "bevy_math",
+ "bevy_reflect",
+ "bevy_render",
+ "bevy_sprite",
+ "bevy_time",
+ "bevy_transform",
+ "rand",
 ]
 
 [[package]]

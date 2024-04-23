@@ -9,7 +9,7 @@ use crate::{
         ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
     },
     avatars::Thruster,
-    components::{AsteroidTag, Damage, Health, Player, PlayerShipTag, ProjectileTag},
+    components::{AsteroidTag, Damage, Health, Player, PlayerShipTag, ProjectileTag, Score},
     utils::Heading,
 };
 
@@ -93,6 +93,7 @@ fn handle_projectile_collision_events(
     destroy_ship_sound: Res<ShipDestroyedSound>,
     destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
     asteroid_clash_sound: Res<AsteroidClashSound>,
+    mut score: ResMut<Score>,
     q_proj: Query<
         &Damage,
         (
@@ -159,6 +160,7 @@ fn handle_projectile_collision_events(
                                     settings: PlaybackSettings::DESPAWN,
                                 });
                                 commands.entity(aster_id).despawn();
+                                score.0 += 1;
                             } else {
                                 if let Ok(proj_dmg) = q_proj.get(proj_id) {
                                     aster_health.0 -= proj_dmg.0;

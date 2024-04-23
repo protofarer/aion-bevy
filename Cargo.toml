@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 bevy = { version = "0.13.2", features = ["wav", "dynamic_linking"] }
+bevy_particle_systems = "0.12.0"
 bevy_rapier2d = { version = "0.25.0", features = ["debug-render-2d", "simd-stable", "parallel", "serde-serialize"] }
 # also rapier2d features: "enhanced-determinism", "wasm-bindgen"
 bevy_vector_shapes = "0.7.0"

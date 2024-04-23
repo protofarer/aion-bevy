@@ -7,6 +7,11 @@ use bevy::utils::Instant;
 use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
+use bevy_particle_systems::{
+    ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
+    ParticleSystemBundle, ParticleSystemPlugin, Playing, VelocityModifier::*,
+};
+
 use crate::archetypes::{AsteroidSizes, ProjectileBundle};
 use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
 use crate::avatars::{gen_asteroid, gen_playership};
@@ -58,6 +63,7 @@ pub fn setup_play(
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
+    asset_server: Res<AssetServer>,
 ) {
     let (ship, children) = gen_playership(
         playership_mesh_handle.0.clone(),
@@ -167,6 +173,57 @@ pub fn setup_play(
             ..default()
         }),
     ));
+
+    // commands
+    //     .spawn(ParticleSystemBundle {
+    //         particle_system: ParticleSystem {
+    //             max_particles: 10_000,
+    //             texture: ParticleTexture::Sprite(asset_server.load("my_particle.png")),
+    //             spawn_rate_per_second: 25.0.into(),
+    //             initial_speed: JitteredValue::jittered(3.0, -1.0..1.0),
+    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
+    //             color: ColorOverTime::Gradient(Gradient::new(vec![
+    //                 ColorPoint::new(Color::WHITE, 0.0),
+    //                 ColorPoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+    //             ])),
+    //             looping: true,
+    //             system_duration_seconds: 10.0,
+    //             ..ParticleSystem::default()
+    //         },
+    //         ..ParticleSystemBundle::default()
+    //     })
+    //     .insert(Playing);
+
+    commands
+        .spawn(ParticleSystemBundle {
+            particle_system: ParticleSystem {
+                max_particles: 50_000,
+                texture: asset_server.load("px.png").into(),
+                spawn_rate_per_second: 1000.0.into(),
+                initial_speed: JitteredValue::jittered(200.0, -50.0..50.0),
+                velocity_modifiers: vec![Drag(0.01.into())],
+                lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
+                color: ColorOverTime::Gradient(Curve::new(vec![
+                    CurvePoint::new(Color::PURPLE, 0.0),
+                    CurvePoint::new(Color::RED, 0.5),
+                    CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+                ])),
+                looping: true,
+                system_duration_seconds: 10.0,
+                max_distance: Some(300.0),
+                scale: 2.0.into(),
+                bursts: vec![
+                    ParticleBurst::new(0.0, 1000),
+                    ParticleBurst::new(2.0, 1000),
+                    ParticleBurst::new(4.0, 1000),
+                    ParticleBurst::new(6.0, 1000),
+                    ParticleBurst::new(8.0, 1000),
+                ],
+                ..ParticleSystem::default()
+            },
+            ..ParticleSystemBundle::default()
+        })
+        .insert(Playing);
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

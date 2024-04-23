@@ -10,6 +10,7 @@ use lazy_static::lazy_static;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, time::Stopwatch};
 use bevy_vector_shapes::Shape2dPlugin;
+use bevy_particle_systems::ParticleSystemPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
 use play::setup_play;
 
@@ -93,6 +94,7 @@ fn main() {
         }))
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_plugins(Shape2dPlugin::default())
+        .add_plugins(ParticleSystemPlugin)
         .insert_resource(ClearColor(BACKGROUND_COLOR))
         .init_state::<GameState>()
         .add_systems(Startup, (setup, setup_play, setup_fps_counter).chain()) // setup_play here while no scenes impl'd
