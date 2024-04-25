@@ -8,8 +8,8 @@ use bevy_rapier2d::prelude::*;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 
 use bevy_particle_systems::{
-    ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
-    ParticleSystemBundle, ParticleSystemPlugin, Playing, VelocityModifier::*,
+    CircleSegment, ColorOverTime, Curve, CurvePoint, EmitterShape, JitteredValue, ParticleBurst,
+    ParticleSystem, ParticleSystemBundle, ParticleSystemPlugin, Playing, VelocityModifier::*,
 };
 
 use crate::archetypes::{AsteroidSizes, ProjectileBundle};
@@ -23,9 +23,9 @@ use crate::{
     utils::Heading, GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
 };
 use crate::{
-    AsteroidMaterialHandles, AsteroidMeshHandles, PlayerShipMaterialHandle, PlayerShipMeshHandle,
-    DEFAULT_ROTATION, LABEL_COLOR, LARGE_ASTEROID_R, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING,
-    SCORE_COLOR, SMALL_ASTEROID_R,
+    AsteroidMaterialHandles, AsteroidMeshHandles, ParticleMeshHandle, PlayerShipMaterialHandle,
+    PlayerShipMeshHandle, ThrustParticleTexture, DEFAULT_ROTATION, LABEL_COLOR, LARGE_ASTEROID_R,
+    SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, SMALL_ASTEROID_R,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -63,6 +63,7 @@ pub fn setup_play(
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
+    thrust_particle_texture: Res<ThrustParticleTexture>,
     asset_server: Res<AssetServer>,
 ) {
     let (ship, children) = gen_playership(
@@ -71,9 +72,11 @@ pub fn setup_play(
         0.,
         0.,
         None,
+        thrust_particle_texture.0.clone().into(),
     );
     commands.spawn(ship).with_children(|parent| {
-        parent.spawn(children);
+        parent.spawn(children.0);
+        parent.spawn(children.1);
     });
 
     let ast1 = gen_asteroid(
@@ -194,36 +197,99 @@ pub fn setup_play(
     //     })
     //     .insert(Playing);
 
+    // CIRCULAR OUTWARD
+    // commands
+    //     .spawn(ParticleSystemBundle {
+    //         particle_system: ParticleSystem {
+    //             max_particles: 1_000,
+    //             texture: asset_server.load("px.png").into(),
+    //             spawn_rate_per_second: 10.0.into(),
+    //             initial_speed: JitteredValue::jittered(200.0, -50.0..50.0),
+    //             velocity_modifiers: vec![Drag(0.01.into())],
+    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
+    //             color: ColorOverTime::Gradient(Curve::new(vec![
+    //                 CurvePoint::new(Color::PURPLE, 0.0),
+    //                 CurvePoint::new(Color::RED, 0.5),
+    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+    //             ])),
+    //             looping: true,
+    //             system_duration_seconds: 10.0,
+    //             max_distance: Some(100.0),
+    //             scale: 1.0.into(),
+    //             bursts: vec![
+    //                 ParticleBurst::new(0.0, 100),
+    //                 ParticleBurst::new(2.0, 100),
+    //                 ParticleBurst::new(4.0, 100),
+    //                 ParticleBurst::new(6.0, 100),
+    //                 ParticleBurst::new(8.0, 100),
+    //             ],
+    //             ..ParticleSystem::default()
+    //         },
+    //         transform: Transform::from_xyz(LEFT_WALL + 25., BOTTOM_WALL + 25., 0.0),
+    //         ..ParticleSystemBundle::default()
+    //     })
+    //     .insert(Playing);
+
+    // STRAIGHT EMIT,eg: tracers, laser residue
     commands
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 50_000,
                 texture: asset_server.load("px.png").into(),
-                spawn_rate_per_second: 1000.0.into(),
-                initial_speed: JitteredValue::jittered(200.0, -50.0..50.0),
-                velocity_modifiers: vec![Drag(0.01.into())],
-                lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
+                spawn_rate_per_second: 10.0.into(),
+                initial_speed: JitteredValue::jittered(70.0, -3.0..3.0),
+                lifetime: JitteredValue::jittered(3.0, -2.0..2.0),
                 color: ColorOverTime::Gradient(Curve::new(vec![
                     CurvePoint::new(Color::PURPLE, 0.0),
                     CurvePoint::new(Color::RED, 0.5),
                     CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
                 ])),
+                emitter_shape: EmitterShape::line(200.0, std::f32::consts::FRAC_PI_4),
                 looping: true,
+                rotate_to_movement_direction: true,
+                initial_rotation: (-90.0_f32).to_radians().into(),
                 system_duration_seconds: 10.0,
                 max_distance: Some(300.0),
-                scale: 2.0.into(),
-                bursts: vec![
-                    ParticleBurst::new(0.0, 1000),
-                    ParticleBurst::new(2.0, 1000),
-                    ParticleBurst::new(4.0, 1000),
-                    ParticleBurst::new(6.0, 1000),
-                    ParticleBurst::new(8.0, 1000),
-                ],
+                scale: 1.0.into(),
                 ..ParticleSystem::default()
             },
+            transform: Transform::from_xyz(LEFT_WALL + 100., BOTTOM_WALL + 100., 0.0),
             ..ParticleSystemBundle::default()
         })
         .insert(Playing);
+
+    // CONE, eg: ship exhaust, weapon muzzle flash
+    // commands
+    //     .spawn(ParticleSystemBundle {
+    //         particle_system: ParticleSystem {
+    //             max_particles: 1000,
+    //             texture: thrust_particle_texture.0.clone().into(),
+    //             spawn_rate_per_second: 50.0.into(),
+    //             initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
+    //             lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
+    //             color: ColorOverTime::Gradient(Curve::new(vec![
+    //                 CurvePoint::new(Color::PURPLE, 0.0),
+    //                 CurvePoint::new(Color::RED, 0.5),
+    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+    //             ])),
+    //             emitter_shape: CircleSegment {
+    //                 radius: 30.0.into(),
+    //                 opening_angle: std::f32::consts::PI / 12.,
+    //                 direction_angle: PI,
+    //             }
+    //             .into(),
+    //             looping: true,
+    //             rotate_to_movement_direction: true,
+    //             initial_rotation: (0.0_f32).to_radians().into(),
+    //             system_duration_seconds: 10.0,
+    //             max_distance: Some(200.0),
+    //             scale: 1.0.into(),
+    //             ..ParticleSystem::default()
+    //         },
+    //         transform: Transform::from_xyz(30., 0., 0.0),
+    //         ..ParticleSystemBundle::default()
+    //     })
+    //     .insert(Playing);
 }
 
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]

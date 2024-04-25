@@ -1,6 +1,7 @@
 use std::{borrow::BorrowMut, time::Duration};
 
 use bevy::prelude::*;
+use bevy_particle_systems::{ParticleSystem, Playing};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
         AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
         ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
     },
-    avatars::Thruster,
+    avatars::Thrust,
     components::{AsteroidTag, Damage, Health, Player, PlayerShipTag, ProjectileTag, Score},
     utils::Heading,
 };
@@ -20,8 +21,8 @@ pub fn physics_plugin(app: &mut App) {
         .add_systems(
             FixedUpdate,
             (apply_forces_ship, handle_projectile_collision_events).chain(),
-        );
-    // .add_systems(Update, print_ball_altitude);
+        )
+        .add_systems(Update, emit_thruster_particles);
 }
 
 pub fn setup_physics(mut commands: Commands) {
@@ -41,11 +42,37 @@ pub fn setup_physics(mut commands: Commands) {
     //     .insert(GravityScale(1.));
 }
 
+pub fn emit_thruster_particles(
+    mut commands: Commands,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut q_ship: Query<(&Children), With<PlayerShipTag>>,
+    mut q_particle_system_child: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
+) {
+    if keyboard_input.pressed(KeyCode::KeyS) {
+        for (children) in q_ship.iter_mut() {
+            for child in children {
+                if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
+                    commands.entity(ent_id).insert(Playing);
+                }
+            }
+        }
+    }
+    if keyboard_input.just_released(KeyCode::KeyS) {
+        for (children) in q_ship.iter_mut() {
+            for child in children {
+                if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
+                    commands.entity(ent_id).remove::<Playing>();
+                }
+            }
+        }
+    }
+}
+
 pub fn apply_forces_ship(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<(&Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
-    mut q_thruster: Query<&Thruster>,
+    mut q_thruster: Query<&Thrust>,
     thrust_sound: Res<ShipThrustSound>,
     mut thrust_sound_stopwatch: ResMut<ShipThrustSoundStopwatch>,
     time: Res<Time>,

@@ -13,7 +13,7 @@ use bevy_rapier2d::{
 use rand::Rng;
 
 use crate::{
-    avatars::{ProjectileEmitterBundle, Thruster},
+    avatars::{ProjectileEmitterBundle, Thrust},
     components::{
         AsteroidTag, Damage, FireType, FireTypes, Health, PlayerShipTag, PrimaryThrustMagnitude,
         ProjectileTag, TransientExistence, TurnRate,
@@ -48,7 +48,7 @@ impl<M: Material2d> Ship<M> {
         heading: Option<Heading>,
         mesh: Handle<Mesh>,
         material: Handle<M>,
-    ) -> (Self, (ProjectileEmitterBundle, Thruster)) {
+    ) -> (Self, (ProjectileEmitterBundle, Thrust)) {
         (
             Self {
                 mesh_bundle: MaterialMesh2dBundle {
@@ -94,7 +94,7 @@ impl<M: Material2d> Ship<M> {
                         fire_type: FireTypes::Primary,
                     }),
                 ),
-                Thruster::default(),
+                Thrust::default(),
             ),
         )
     }

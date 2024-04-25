@@ -5,6 +5,10 @@ use bevy::{
     sprite::{Material2d, MaterialMesh2dBundle},
     utils::Duration,
 };
+use bevy_particle_systems::{
+    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleSystem,
+    ParticleSystemBundle, ParticleTexture, Playing,
+};
 use bevy_rapier2d::prelude::*;
 use rand::Rng;
 
@@ -47,7 +51,8 @@ pub fn gen_playership(
     x: f32,
     y: f32,
     heading: Option<Heading>,
-) -> (PlayerShip, (ProjectileEmitterBundle, Thruster)) {
+    thruster_particle_texture: Handle<Image>,
+) -> (PlayerShip, (ProjectileEmitterBundle, ThrusterBundle)) {
     (
         PlayerShip {
             mesh_bundle: MaterialMesh2dBundle {
@@ -94,7 +99,12 @@ pub fn gen_playership(
                     fire_type: FireTypes::Primary,
                 }),
             ),
-            Thruster::default(),
+            ThrusterBundle::new(
+                0.,
+                0.,
+                DEFAULT_THRUST_FORCE_MAGNITUDE,
+                thruster_particle_texture.into(),
+            ),
         ),
     )
 }
@@ -158,11 +168,54 @@ impl Default for ProjectileEmitterBundle {
 // thrusters apply only linear force onto rigidbody (conventionally onto center of mass)
 // used as a child, so that there can be many thrusters for 1 parent entity
 #[derive(Component)]
-pub struct Thruster(pub f32);
+pub struct Thrust(pub f32);
 
-impl Default for Thruster {
+impl Default for Thrust {
     fn default() -> Self {
         Self(DEFAULT_THRUST_FORCE_MAGNITUDE)
+    }
+}
+
+#[derive(Bundle)]
+pub struct ThrusterBundle {
+    thrust: Thrust,
+    particles: ParticleSystemBundle,
+}
+
+impl ThrusterBundle {
+    pub fn new(x: f32, y: f32, thrust: f32, particle_texture: ParticleTexture) -> ThrusterBundle {
+        ThrusterBundle {
+            thrust: Thrust(thrust),
+            particles: ParticleSystemBundle {
+                particle_system: ParticleSystem {
+                    max_particles: 1000,
+                    texture: particle_texture,
+                    spawn_rate_per_second: 50.0.into(),
+                    initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
+                    lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
+                    color: ColorOverTime::Gradient(Curve::new(vec![
+                        CurvePoint::new(Color::PURPLE, 0.0),
+                        CurvePoint::new(Color::RED, 0.5),
+                        CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+                    ])),
+                    emitter_shape: CircleSegment {
+                        radius: 30.0.into(),
+                        opening_angle: std::f32::consts::PI / 12.,
+                        direction_angle: PI,
+                    }
+                    .into(),
+                    looping: true,
+                    rotate_to_movement_direction: true,
+                    initial_rotation: (0.0_f32).to_radians().into(),
+                    system_duration_seconds: 10.0,
+                    max_distance: Some(100.0),
+                    scale: 1.0.into(),
+                    ..ParticleSystem::default()
+                },
+                // transform: Transform::from_xyz(x + 30., y, 0.0),
+                ..ParticleSystemBundle::default()
+            },
+        }
     }
 }
 

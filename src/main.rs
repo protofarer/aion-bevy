@@ -9,8 +9,8 @@ use audio::{
 use lazy_static::lazy_static;
 
 use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, time::Stopwatch};
+use bevy_particle_systems::{ParticleSystemPlugin, ParticleTexture};
 use bevy_vector_shapes::Shape2dPlugin;
-use bevy_particle_systems::ParticleSystemPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
 use play::setup_play;
 
@@ -148,8 +148,8 @@ pub fn setup(
     let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
     commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
 
-    let asteroid_material_handle = materials.add(Color::GRAY);
-    commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material_handle]));
+    let asteroid_material = materials.add(Color::GRAY);
+    commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material]));
 
     let mut asteroid_mesh_handles = vec![];
     for n_sides in [5, 6, 8] {
@@ -161,22 +161,8 @@ pub fn setup(
     }
     commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
-    // let wall_collision_sound = asset_server.load("sounds/breakout_collision.ogg");
-    // let paddle_collision_sound = asset_server.load("sounds/med_shoot.wav");
-    // let goal_collision_sound = asset_server.load("sounds/jump.wav");
-    // commands.insert_resource(CollisionSound {
-    //     wall: wall_collision_sound,
-    //     paddle: paddle_collision_sound,
-    //     goal: goal_collision_sound,
-    // });
-    // commands.insert_resource(Scores { a: 0, b: 0 });
-    // commands.insert_resource(MatchInfo {
-    //     round_count: 0,
-    //     rounds_total: ROUNDS_TOTAL,
-    // });
-    // commands.insert_resource(RoundData {
-    //     paddle_hit_count: 0,
-    // });
+    let thruster_particle_texture = asset_server.load("px.png").into();
+    commands.insert_resource(ThrustParticleTexture(thruster_particle_texture));
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -198,3 +184,9 @@ pub struct PlayerShipMeshHandle(Handle<Mesh>);
 
 #[derive(Resource)]
 pub struct PlayerShipMaterialHandle(Handle<ColorMaterial>);
+
+#[derive(Resource)]
+pub struct ParticleMeshHandle(Handle<Mesh>);
+
+#[derive(Resource)]
+pub struct ThrustParticleTexture(pub Handle<Image>);
