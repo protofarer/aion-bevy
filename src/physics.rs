@@ -78,7 +78,6 @@ pub fn emit_collision_particles(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     mut q_aster: Query<(&Transform, &CollisionRadius), With<AsteroidTag>>,
-    mut q_particle_system_child: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
     thrust_particle_texture: Res<ThrustParticleTexture>,
 ) {
     for event in collision_events.read() {
@@ -86,7 +85,7 @@ pub fn emit_collision_particles(
             CollisionEvent::Started(ent_a, ent_b, _flags) => {
                 let aster_a_result = q_aster.get(*ent_a);
                 let aster_b_result = q_aster.get(*ent_b);
-                if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok()) {
+                if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
                     let (transform_a, r_a) = aster_a_result.unwrap();
                     let (transform_b, r_b) = aster_b_result.unwrap();
                     // TODO get vec b - a and normalize and multiply by b_radius
