@@ -194,9 +194,10 @@ impl ThrusterBundle {
                     initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
                     lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
                     color: ColorOverTime::Gradient(Curve::new(vec![
-                        CurvePoint::new(Color::PURPLE, 0.0),
-                        CurvePoint::new(Color::RED, 0.5),
-                        CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+                        CurvePoint::new(Color::BLUE, 0.0),
+                        CurvePoint::new(Color::ORANGE, 0.025),
+                        CurvePoint::new(Color::RED, 0.1),
+                        CurvePoint::new(Color::RED, 1.),
                     ])),
                     emitter_shape: CircleSegment {
                         radius: 30.0.into(),
