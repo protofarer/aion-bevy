@@ -132,6 +132,32 @@ pub fn setup_play(
             },
         ));
     }
+
+    // Diagonal collision, see collision particles
+    commands.spawn(gen_asteroid(
+        AsteroidSizes::Medium,
+        5,
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        LEFT_WALL + 50.,
+        BOTTOM_WALL + 300.,
+        Velocity {
+            linvel: Heading(-45.).linvel(20.),
+            angvel: 0.,
+        },
+    ));
+    commands.spawn(gen_asteroid(
+        AsteroidSizes::Medium,
+        5,
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        LEFT_WALL + 130.,
+        BOTTOM_WALL + 230.,
+        Velocity {
+            linvel: Heading(135.).linvel(20.),
+            angvel: 0.,
+        },
+    ));
     // spawn for test
     // let n = 15.;
     // let dx = (RIGHT_WALL - LEFT_WALL) / n;

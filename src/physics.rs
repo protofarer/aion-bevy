@@ -1,7 +1,10 @@
-use std::{borrow::BorrowMut, time::Duration};
+use std::{borrow::BorrowMut, f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
-use bevy_particle_systems::{ParticleSystem, Playing};
+use bevy_particle_systems::{
+    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
+    ParticleSystemBundle, ParticleTexture, Playing,
+};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
@@ -10,8 +13,11 @@ use crate::{
         ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
     },
     avatars::Thrust,
-    components::{AsteroidTag, Damage, Health, Player, PlayerShipTag, ProjectileTag, Score},
+    components::{
+        AsteroidTag, CollisionRadius, Damage, Health, Player, PlayerShipTag, ProjectileTag, Score,
+    },
     utils::Heading,
+    ThrustParticleTexture,
 };
 
 pub fn physics_plugin(app: &mut App) {
@@ -22,7 +28,7 @@ pub fn physics_plugin(app: &mut App) {
             FixedUpdate,
             (apply_forces_ship, handle_projectile_collision_events).chain(),
         )
-        .add_systems(Update, emit_thruster_particles);
+        .add_systems(Update, (emit_thruster_particles, emit_collision_particles));
 }
 
 pub fn setup_physics(mut commands: Commands) {
@@ -64,6 +70,104 @@ pub fn emit_thruster_particles(
                     commands.entity(ent_id).remove::<Playing>();
                 }
             }
+        }
+    }
+}
+
+pub fn emit_collision_particles(
+    mut commands: Commands,
+    mut collision_events: EventReader<CollisionEvent>,
+    mut q_aster: Query<(&Transform, &CollisionRadius), With<AsteroidTag>>,
+    mut q_particle_system_child: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
+    thrust_particle_texture: Res<ThrustParticleTexture>,
+) {
+    for event in collision_events.read() {
+        match event {
+            CollisionEvent::Started(ent_a, ent_b, _flags) => {
+                let aster_a_result = q_aster.get(*ent_a);
+                let aster_b_result = q_aster.get(*ent_b);
+                if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok()) {
+                    let (transform_a, r_a) = aster_a_result.unwrap();
+                    let (transform_b, r_b) = aster_b_result.unwrap();
+                    // TODO get vec b - a and normalize and multiply by b_radius
+                    // add to b's position
+
+                    let normalized =
+                        (transform_b.translation - transform_a.translation).normalize();
+                    let pos_perpendicular =
+                        Vec2::new(normalized.x, normalized.y).to_angle() + PI / 2.0;
+                    let neg_perpendicular =
+                        Vec2::new(normalized.x, normalized.y).to_angle() - PI / 2.0;
+                    let collision_pt = transform_a.translation + normalized * r_a.0;
+
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 200,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 10.0.into(),
+                                initial_speed: JitteredValue::jittered(20.0, -15.0..10.0),
+                                lifetime: JitteredValue::jittered(2.0, -0.5..0.5),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::WHITE, 0.0),
+                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
+                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
+                                ])),
+                                emitter_shape: CircleSegment {
+                                    radius: 0.0.into(),
+                                    opening_angle: std::f32::consts::PI / 16.,
+                                    direction_angle: pos_perpendicular,
+                                }
+                                .into(),
+                                looping: false,
+                                rotate_to_movement_direction: true,
+                                initial_rotation: (0_f32).to_radians().into(),
+                                system_duration_seconds: 0.25,
+                                max_distance: Some(100.0),
+                                scale: 1.0.into(),
+                                bursts: vec![ParticleBurst::new(0.0, 10)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(collision_pt.x, collision_pt.y, 0.0),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 200,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 10.0.into(),
+                                initial_speed: JitteredValue::jittered(20.0, -15.0..10.0),
+                                lifetime: JitteredValue::jittered(2.0, -0.5..0.5),
+                                // color: ColorOverTime::Constant((Color::WHITE)),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::WHITE, 0.0),
+                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
+                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
+                                ])),
+                                emitter_shape: CircleSegment {
+                                    radius: 0.0.into(),
+                                    opening_angle: std::f32::consts::PI / 16.,
+                                    direction_angle: neg_perpendicular,
+                                }
+                                .into(),
+                                looping: false,
+                                rotate_to_movement_direction: true,
+                                initial_rotation: (0_f32).to_radians().into(),
+                                system_duration_seconds: 0.25,
+                                max_distance: Some(100.0),
+                                scale: 1.0.into(),
+                                bursts: vec![ParticleBurst::new(0.0, 10)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(collision_pt.x, collision_pt.y, 0.0),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                }
+            }
+            _ => {}
         }
     }
 }

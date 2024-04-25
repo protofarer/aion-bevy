@@ -149,3 +149,6 @@ pub struct AsteroidTag;
 
 #[derive(Component)]
 pub struct PlayerShipTag;
+
+#[derive(Component)]
+pub struct CollisionRadius(pub f32);

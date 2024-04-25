@@ -15,8 +15,8 @@ use rand::Rng;
 use crate::{
     avatars::{ProjectileEmitterBundle, Thrust},
     components::{
-        AsteroidTag, Damage, FireType, FireTypes, Health, PlayerShipTag, PrimaryThrustMagnitude,
-        ProjectileTag, TransientExistence, TurnRate,
+        AsteroidTag, CollisionRadius, Damage, FireType, FireTypes, Health, PlayerShipTag,
+        PrimaryThrustMagnitude, ProjectileTag, TransientExistence, TurnRate,
     },
     utils::Heading,
     Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
@@ -268,6 +268,7 @@ pub struct AsteroidBundle<M: Material2d> {
     mesh_bundle: MaterialMesh2dBundle<M>,
     rigidbody: RigidBody,
     collider: Collider,
+    collision_radius: CollisionRadius,
     collision_events: ActiveEvents,
     velocity: Velocity,
     health: Health,
@@ -332,6 +333,7 @@ impl<M: Material2d> AsteroidBundle<M> {
             velocity,
             damage,
             collider: Collider::ball(r),
+            collision_radius: CollisionRadius(r),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             health,
             restitution: Restitution::coefficient(INIT_ASTEROID_RESTITUTION),
