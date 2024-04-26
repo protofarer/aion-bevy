@@ -14,7 +14,8 @@ use crate::{
     },
     avatars::Thrust,
     components::{
-        AsteroidTag, CollisionRadius, Damage, Health, Player, PlayerShipTag, ProjectileTag, Score,
+        AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, Player, PlayerShipTag,
+        ProjectileTag, Score,
     },
     utils::Heading,
     ThrustParticleTexture,
@@ -77,19 +78,42 @@ pub fn emit_thruster_particles(
 pub fn emit_collision_particles(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
-    mut q_aster: Query<(&Transform, &CollisionRadius), With<AsteroidTag>>,
+    // mut contact_force_events: EventReader<ContactForceEvent>,
+    mut q_aster: Query<
+        (&Transform, &CollisionRadius),
+        (
+            With<AsteroidTag>,
+            Without<PlayerShipTag>,
+            Without<ProjectileTag>,
+        ),
+    >,
+    mut q_proj: Query<
+        (&Transform, &Velocity),
+        (
+            With<ProjectileTag>,
+            Without<AsteroidTag>,
+            Without<PlayerShipTag>,
+        ),
+    >,
+    mut q_ship: Query<
+        (&Transform),
+        (
+            With<PlayerShipTag>,
+            Without<AsteroidTag>,
+            Without<ProjectileTag>,
+        ),
+    >,
     thrust_particle_texture: Res<ThrustParticleTexture>,
 ) {
     for event in collision_events.read() {
         match event {
             CollisionEvent::Started(ent_a, ent_b, _flags) => {
+                // TODO refactor into a function: f(q_aster, ent_a, ent_b) -> (bool, result_a.unwrapped, result_b.unwrapped)
                 let aster_a_result = q_aster.get(*ent_a);
                 let aster_b_result = q_aster.get(*ent_b);
                 if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
                     let (transform_a, r_a) = aster_a_result.unwrap();
                     let (transform_b, r_b) = aster_b_result.unwrap();
-                    // TODO get vec b - a and normalize and multiply by b_radius
-                    // add to b's position
 
                     let normalized =
                         (transform_b.translation - transform_a.translation).normalize();
@@ -161,6 +185,95 @@ pub fn emit_collision_particles(
                                 ..ParticleSystem::default()
                             },
                             transform: Transform::from_xyz(collision_pt.x, collision_pt.y, 0.0),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                }
+
+                if let Ok((transform, velocity)) = q_proj.get(*ent_a) {
+                    // f(commands, transf, vel) {}
+                    let direction_angle = Vec2::from_angle(PI).rotate(velocity.linvel).to_angle();
+
+                    // TODO gen_projectile_impact_particle_bundle(texture, translation, )
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 6,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 0.0.into(),
+                                // TODO scale with proj velocity
+                                initial_speed: JitteredValue::jittered(30.0, -10.0..0.0),
+                                lifetime: JitteredValue::jittered(0.5, -0.25..0.0),
+                                // color: ColorOverTime::Constant((Color::WHITE)),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::WHITE, 0.0),
+                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
+                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
+                                ])),
+                                emitter_shape: CircleSegment {
+                                    radius: 0.0.into(),
+                                    opening_angle: std::f32::consts::PI / 2.0,
+                                    direction_angle,
+                                }
+                                .into(),
+                                looping: false,
+                                rotate_to_movement_direction: true,
+                                initial_rotation: (0_f32).to_radians().into(),
+                                system_duration_seconds: 0.25,
+                                max_distance: Some(100.0),
+                                scale: 1.0.into(),
+                                bursts: vec![ParticleBurst::new(0.0, 6)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(
+                                transform.translation.x,
+                                transform.translation.y,
+                                0.0,
+                            ),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                }
+
+                if let Ok((transform, velocity)) = q_proj.get(*ent_b) {
+                    // f(commands, transf, vel) {}
+                    let direction_angle = Vec2::from_angle(PI).rotate(velocity.linvel).to_angle();
+
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 6,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 0.0.into(),
+                                // TODO scale with proj velocity
+                                initial_speed: JitteredValue::jittered(30.0, -10.0..0.0),
+                                lifetime: JitteredValue::jittered(0.5, -0.25..0.0),
+                                // color: ColorOverTime::Constant((Color::WHITE)),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::WHITE, 0.0),
+                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
+                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
+                                ])),
+                                emitter_shape: CircleSegment {
+                                    radius: 0.0.into(),
+                                    opening_angle: std::f32::consts::PI / 2.0,
+                                    direction_angle,
+                                }
+                                .into(),
+                                looping: false,
+                                rotate_to_movement_direction: true,
+                                initial_rotation: (0_f32).to_radians().into(),
+                                system_duration_seconds: 0.25,
+                                max_distance: Some(100.0),
+                                scale: 1.0.into(),
+                                bursts: vec![ParticleBurst::new(0.0, 6)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(
+                                transform.translation.x,
+                                transform.translation.y,
+                                0.0,
+                            ),
                             ..ParticleSystemBundle::default()
                         })
                         .insert(Playing);
@@ -255,6 +368,20 @@ fn handle_projectile_collision_events(
                 let proj_a_result = q_proj.get(*ent_a);
                 let proj_b_result = q_proj.get(*ent_b);
 
+                if proj_a_result.is_ok() {
+                    commands.entity(*ent_a).insert(DespawnDelay(Timer::new(
+                        Duration::from_secs_f32(2.0),
+                        TimerMode::Once,
+                    )));
+                }
+
+                if proj_b_result.is_ok() {
+                    commands.entity(*ent_b).insert(DespawnDelay(Timer::new(
+                        Duration::from_secs_f32(1.0),
+                        TimerMode::Once,
+                    )));
+                }
+
                 if [proj_a_result, proj_b_result].iter().any(|x| x.is_ok()) {
                     commands.spawn(AudioBundle {
                         source: collision_sound.0.clone(),
@@ -283,7 +410,9 @@ fn handle_projectile_collision_events(
                         };
 
                         if let Ok((mut aster_health, _)) = q_aster.get_mut(aster_id) {
-                            commands.entity(proj_id).despawn();
+                            // TODO remove collider, add DespawnDelay component
+                            // TODO system_despawn_delay
+                            // ticks down delay timer then destroys ent
                             if aster_health.0 <= 1 {
                                 commands.spawn(AudioBundle {
                                     source: destroy_asteroid_sound.0.clone(),

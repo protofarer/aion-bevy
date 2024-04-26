@@ -83,7 +83,10 @@ pub fn gen_playership(
                 torque: 0.,
             },
             primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
-            restitution: Restitution::coefficient(INIT_SHIP_RESTITUTION),
+            restitution: Restitution {
+                coefficient: INIT_SHIP_RESTITUTION,
+                combine_rule: CoefficientCombineRule::Multiply, // extra bouncy for player's sake to not get quickly dribbled to death
+            },
             gravity: GravityScale(0.),
             damping: Damping {
                 linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,

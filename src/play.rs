@@ -16,8 +16,8 @@ use crate::archetypes::{AsteroidSizes, ProjectileBundle};
 use crate::audio::{BackgroundMusic, ProjectileEmitSound, ShipThrustSoundStopwatch};
 use crate::avatars::{gen_asteroid, gen_playership};
 use crate::components::{
-    FireType, FireTypes, Player, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
-    ScoreboardUi, TurnRate,
+    DespawnDelay, FireType, FireTypes, Player, PlayerShipTag, ProjectileEmission, ProjectileTag,
+    Score, ScoreboardUi, TurnRate,
 };
 use crate::{
     utils::Heading, GameState, BOTTOM_WALL, LEFT_WALL, MEDIUM_ASTEROID_R, RIGHT_WALL, TOP_WALL,
@@ -32,8 +32,10 @@ pub fn play_plugin(app: &mut App) {
     app.add_systems(
         FixedUpdate,
         (
-            ship_turn, wraparound,
+            ship_turn,
+            wraparound,
             ship_fire,
+            despawn_delay,
             // check_for_collisions,
             // play_collision_sound,
             // process_score,
@@ -461,4 +463,16 @@ pub fn ship_fire(
 fn update_scoreboard(scoreboard: Res<Score>, mut query: Query<&mut Text, With<ScoreboardUi>>) {
     let mut text = query.single_mut();
     text.sections[1].value = scoreboard.0.to_string();
+}
+
+fn despawn_delay(
+    mut commands: Commands,
+    mut query: Query<(Entity, &mut DespawnDelay), With<ProjectileTag>>,
+    time: Res<Time>,
+) {
+    for (entity, mut despawn_delay) in &mut query {
+        if (despawn_delay.0.tick(time.delta()).just_finished()) {
+            commands.entity(entity).despawn();
+        }
+    }
 }

@@ -270,6 +270,8 @@ pub struct AsteroidBundle<M: Material2d> {
     collider: Collider,
     collision_radius: CollisionRadius,
     collision_events: ActiveEvents,
+    // TODO scale animations with force (as opposed to bruting size) https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection#the-contact-graph
+    // collision_force_events: ActiveEvent::CONTACT_FORCE_EVENTS,
     velocity: Velocity,
     health: Health,
     damage: Damage,
@@ -335,6 +337,7 @@ impl<M: Material2d> AsteroidBundle<M> {
             collider: Collider::ball(r),
             collision_radius: CollisionRadius(r),
             collision_events: ActiveEvents::COLLISION_EVENTS,
+            // collision_force_events: ActiveEvents::COLLISION_FORCE_EVENTS,
             health,
             restitution: Restitution::coefficient(INIT_ASTEROID_RESTITUTION),
             gravity: GravityScale(0.),

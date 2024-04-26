@@ -152,3 +152,6 @@ pub struct PlayerShipTag;
 
 #[derive(Component)]
 pub struct CollisionRadius(pub f32);
+
+#[derive(Component)]
+pub struct DespawnDelay(pub Timer);
