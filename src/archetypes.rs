@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::{
     prelude::*,
     sprite::{Material2d, MaterialMesh2dBundle},
@@ -10,19 +8,17 @@ use bevy_rapier2d::{
     },
     geometry::{ActiveEvents, Collider, Restitution},
 };
-use rand::Rng;
 
 use crate::{
     avatars::{ProjectileEmitterBundle, Thrust},
     components::{
-        AsteroidTag, CollisionRadius, Damage, FireType, FireTypes, Health, PlayerShipTag,
-        PrimaryThrustMagnitude, ProjectileTag, TransientExistence, TurnRate,
+        AsteroidTag, CollisionRadius, Damage, FireType, Health, PrimaryThrustMagnitude,
+        ProjectileTag, TurnRate,
+    },
+    game::{
+        Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL
     },
     utils::Heading,
-    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE,
-    INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH,
-    INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -90,9 +86,7 @@ impl<M: Material2d> Ship<M> {
                 ProjectileEmitterBundle::new(
                     22.,
                     heading.unwrap_or_default(),
-                    Some(FireType {
-                        fire_type: FireTypes::Primary,
-                    }),
+                    Some(FireType::Primary),
                 ),
                 Thrust::default(),
             ),
@@ -104,7 +98,6 @@ impl<M: Material2d> Ship<M> {
 pub struct ParticleBundle {
     sprite: SpriteBundle,
     velocity: Velocity,
-    transient_existence: TransientExistence,
 }
 
 impl ParticleBundle {
@@ -114,15 +107,10 @@ impl ParticleBundle {
         heading: Option<Heading>,
         move_speed: Option<Speed>,
         color: Option<Color>,
-        duration: Option<Duration>,
     ) -> Self {
         let move_speed = match move_speed {
             Some(x) => x,
             None => DEFAULT_MOVESPEED,
-        };
-        let transient_existence = match duration {
-            Some(x) => TransientExistence::new(x),
-            None => TransientExistence::default(),
         };
         let heading = match heading {
             Some(x) => x,
@@ -146,7 +134,6 @@ impl ParticleBundle {
                 linvel: heading.linvel(move_speed),
                 ..default()
             },
-            transient_existence,
         }
     }
 }
@@ -167,7 +154,6 @@ impl Default for ParticleBundle {
                 ..default()
             },
             velocity: Velocity::default(),
-            transient_existence: TransientExistence::default(),
         }
     }
 }
@@ -176,7 +162,6 @@ impl Default for ParticleBundle {
 pub struct ProjectileBundle {
     sprite: SpriteBundle,
     damage: Damage,
-    transient_existence: TransientExistence,
     rigidbody: RigidBody,
     collider: Collider,
     collision_events: ActiveEvents,
@@ -195,27 +180,21 @@ impl ProjectileBundle {
         projectile_speed: Option<Speed>,
         color: Option<Color>,
         damage: Option<i32>,
-        duration: Option<Duration>,
         restitution_coeff: Option<f32>,
         gravity_scale: Option<f32>,
-        tag: ProjectileTag,
     ) -> Self {
         let projectile_speed = match projectile_speed {
             Some(x) => x,
             None => INIT_SHIP_PROJECTILE_SPEED,
         };
 
-        let particle = ParticleBundle::new(x, y, heading, Some(projectile_speed), color, None);
+        let particle = ParticleBundle::new(x, y, heading, Some(projectile_speed), color);
         let sprite = particle.sprite;
         let velocity = particle.velocity;
 
         let damage = match damage {
             Some(x) => Damage(x),
             None => Damage::default(),
-        };
-        let transient_existence = match duration {
-            Some(x) => TransientExistence::new(x),
-            None => TransientExistence::default(),
         };
         let restitution = match restitution_coeff {
             Some(x) => Restitution::coefficient(x),
@@ -232,7 +211,6 @@ impl ProjectileBundle {
             collider: Collider::ball(0.5),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             damage,
-            transient_existence,
             velocity,
             restitution,
             gravity,
@@ -244,13 +222,12 @@ impl ProjectileBundle {
 
 impl Default for ProjectileBundle {
     fn default() -> Self {
-        let particle = ParticleBundle::new(0., 0., None, None, None, None);
+        let particle = ParticleBundle::new(0., 0., None, None, None);
         let sprite = particle.sprite;
         let velocity = particle.velocity;
         Self {
             sprite,
             damage: Damage::default(),
-            transient_existence: TransientExistence::default(),
             rigidbody: RigidBody::Dynamic,
             collider: Collider::ball(1.),
             collision_events: ActiveEvents::COLLISION_EVENTS,
@@ -316,8 +293,8 @@ impl<M: Material2d> AsteroidBundle<M> {
             None => Damage(INIT_ASTEROID_DAMAGE),
         };
 
-        let mut rng = rand::thread_rng();
-        let angvel = (rng.gen::<f32>() * 0.1) - 0.05;
+        // let mut rng = rand::thread_rng();
+        // let angvel = (rng.gen::<f32>() * 0.1) - 0.05;
 
         Self {
             mesh_bundle: MaterialMesh2dBundle {

@@ -1,11 +1,24 @@
 use bevy::prelude::*;
 use bevy::utils::{Duration, Instant};
 
-use crate::{
-    Speed, TurnSpeed, DEFAULT_DAMAGE, DEFAULT_DURATION_SECS, DEFAULT_HEALTH, DEFAULT_MOVESPEED,
+use crate::game::{
+    Speed, TurnSpeed, DEFAULT_DAMAGE, DEFAULT_DURATION_SECS, DEFAULT_HEALTH,
     DEFAULT_PROJECTILE_EMISSION_COOLDOWN, DEFAULT_THRUST_FORCE_MAGNITUDE, DEFAULT_TURNRATE,
     INIT_SHIP_MOVE_SPEED,
 };
+
+// MARKERS
+
+#[derive(Component)]
+pub struct ProjectileTag;
+
+#[derive(Component)]
+pub struct AsteroidTag;
+
+#[derive(Component)]
+pub struct PlayerShipTag;
+
+// DATA
 
 #[derive(Component)]
 pub enum Player {
@@ -40,52 +53,19 @@ impl Default for Damage {
 }
 
 #[derive(Component)]
-pub struct TransientExistence {
-    duration: Duration,
-    start_time: Instant,
-}
-
-impl TransientExistence {
-    pub fn new(duration: Duration) -> Self {
-        Self {
-            duration,
-            start_time: Instant::now(),
-        }
-    }
-}
-
-impl Default for TransientExistence {
-    fn default() -> Self {
-        Self {
-            duration: Duration::from_secs(DEFAULT_DURATION_SECS),
-            start_time: Instant::now(),
-        }
-    }
-}
-
-#[derive(Component)]
-pub struct MoveSpeed(pub Speed);
-
-impl Default for MoveSpeed {
-    fn default() -> Self {
-        Self(DEFAULT_MOVESPEED)
-    }
-}
-
-#[derive(Component)]
 pub struct ScoreboardUi;
 
-#[derive(Default)]
-pub enum FireTypes {
-    #[default]
+#[derive(Component)]
+pub enum FireType {
+    // #[default]
     Primary,
     Secondary,
 }
 
-#[derive(Component)]
-pub struct FireType {
-    pub fire_type: FireTypes,
-}
+// #[derive(Component)]
+// pub struct FireType {
+//     pub fire_type: FireTypes,
+// }
 
 #[derive(Component)]
 pub struct PrimaryThrustMagnitude(pub f32);
@@ -139,16 +119,6 @@ impl Default for ProjectileEmission {
 
 #[derive(Resource, Default)]
 pub struct Score(pub usize);
-
-// MARKERS
-#[derive(Component)]
-pub struct ProjectileTag;
-
-#[derive(Component)]
-pub struct AsteroidTag;
-
-#[derive(Component)]
-pub struct PlayerShipTag;
 
 #[derive(Component)]
 pub struct CollisionRadius(pub f32);

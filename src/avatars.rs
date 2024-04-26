@@ -1,31 +1,24 @@
 use std::f32::consts::PI;
 
-use bevy::{
-    prelude::*,
-    sprite::{Material2d, MaterialMesh2dBundle},
-    utils::Duration,
-};
+use bevy::{prelude::*, sprite::MaterialMesh2dBundle};
 use bevy_particle_systems::{
     CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleSystem,
-    ParticleSystemBundle, ParticleTexture, Playing,
+    ParticleSystemBundle, ParticleTexture,
 };
 use bevy_rapier2d::prelude::*;
-use rand::Rng;
 
 use crate::{
     archetypes::{AsteroidBundle, AsteroidSizes},
     components::{
-        AsteroidTag, Damage, FireType, FireTypes, Health, MoveSpeed, Player, PlayerShipTag,
-        PrimaryThrustMagnitude, ProjectileEmission, ProjectileTag, TransientExistence, TurnRate,
+        FireType, Health, PlayerShipTag, PrimaryThrustMagnitude, ProjectileEmission, TurnRate,
+    },
+    game::{
+        AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+        DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH, INIT_SHIP_RESTITUTION,
+        INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R, MEDIUM_ASTEROID_HEALTH,
+        MEDIUM_ASTEROID_R, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
     },
     utils::Heading,
-    Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL,
-    DEFAULT_HEADING, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
-    DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED,
-    INIT_SHIP_HEALTH, INIT_SHIP_MOVE_SPEED, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_RESTITUTION,
-    INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R, LEFT_WALL,
-    MEDIUM_ASTEROID_HEALTH, MEDIUM_ASTEROID_R, RIGHT_WALL, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
-    TOP_WALL,
 };
 
 #[derive(Bundle)]
@@ -95,13 +88,7 @@ pub fn gen_playership(
             tag: PlayerShipTag,
         },
         (
-            ProjectileEmitterBundle::new(
-                22.,
-                heading.unwrap_or_default(),
-                Some(FireType {
-                    fire_type: FireTypes::Primary,
-                }),
-            ),
+            ProjectileEmitterBundle::new(22., heading.unwrap_or_default(), Some(FireType::Primary)),
             ThrusterBundle::new(
                 0.,
                 0.,
@@ -122,12 +109,10 @@ pub struct ProjectileEmitterBundle {
 
 impl ProjectileEmitterBundle {
     pub fn new(r: f32, heading: Heading, fire_type: Option<FireType>) -> Self {
-        let mut vec2 = Vec2::new(heading.0.cos(), heading.0.sin());
+        let vec2 = Vec2::new(heading.0.cos(), heading.0.sin());
         let fire_type = match fire_type {
             Some(x) => x,
-            None => FireType {
-                fire_type: FireTypes::Primary,
-            },
+            None => FireType::Primary,
         };
 
         Self {
@@ -149,21 +134,20 @@ impl Default for ProjectileEmitterBundle {
         Self {
             emitter: ProjectileEmission::default(),
             transform: TransformBundle::default(),
-            fire_type: FireType {
-                fire_type: FireTypes::Primary,
-            }, // sprite: SpriteBundle {
-               //     transform: Transform {
-               //         translation: Vec3::new(0., 0., 2.),
-               //         scale: Vec3::new(10., 10., 1.),
-               //         rotation: Heading::default().into(),
-               //         ..default()
-               //     },
-               //     sprite: Sprite {
-               //         color: Color::RED,
-               //         ..default()
-               //     },
-               //     ..default()
-               // },
+            fire_type: FireType::Primary,
+            // sprite: SpriteBundle {
+            //     transform: Transform {
+            //         translation: Vec3::new(0., 0., 2.),
+            //         scale: Vec3::new(10., 10., 1.),
+            //         rotation: Heading::default().into(),
+            //         ..default()
+            //     },
+            //     sprite: Sprite {
+            //         color: Color::RED,
+            //         ..default()
+            //     },
+            //     ..default()
+            // },
         }
     }
 }

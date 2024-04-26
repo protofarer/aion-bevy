@@ -1,62 +1,34 @@
-use std::{borrow::BorrowMut, f32::consts::PI, time::Duration};
+use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_particle_systems::{
     CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
-    ParticleSystemBundle, ParticleTexture, Playing,
+    ParticleSystemBundle, Playing,
 };
 use bevy_rapier2d::prelude::*;
 
 use crate::{
     audio::{
-        AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
-        ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
+        AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
+        ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
     },
     avatars::Thrust,
     components::{
-        AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, Player, PlayerShipTag,
-        ProjectileTag, Score,
+        AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
+        Score,
     },
+    game::ThrustParticleTexture,
     utils::Heading,
-    ThrustParticleTexture,
 };
-
-pub fn physics_plugin(app: &mut App) {
-    app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
-        .add_plugins(RapierDebugRenderPlugin::default())
-        .add_systems(Startup, setup_physics)
-        .add_systems(
-            FixedUpdate,
-            (apply_forces_ship, handle_projectile_collision_events).chain(),
-        )
-        .add_systems(Update, (emit_thruster_particles, emit_collision_particles));
-}
-
-pub fn setup_physics(mut commands: Commands) {
-    // commands
-    //     .spawn(Collider::cuboid(350., 25.))
-    //     .insert(TransformBundle::from(Transform::from_xyz(-350., -50., 0.)));
-    // commands
-    //     .spawn(RigidBody::Dynamic)
-    //     .insert(Collider::ball(10.))
-    //     .insert(Velocity::linear(Vec2::new(0., -300.)))
-    //     .insert(ExternalForce {
-    //         force: Vec2::ZERO,
-    //         torque: 0.,
-    //     })
-    //     .insert(Restitution::coefficient(0.7))
-    //     .insert(TransformBundle::from(Transform::from_xyz(-300., 200., 0.)))
-    //     .insert(GravityScale(1.));
-}
 
 pub fn emit_thruster_particles(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<(&Children), With<PlayerShipTag>>,
+    mut q_ship: Query<&Children, With<PlayerShipTag>>,
     mut q_particle_system_child: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
 ) {
     if keyboard_input.pressed(KeyCode::KeyS) {
-        for (children) in q_ship.iter_mut() {
+        for children in q_ship.iter_mut() {
             for child in children {
                 if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
                     commands.entity(ent_id).insert(Playing);
@@ -65,7 +37,7 @@ pub fn emit_thruster_particles(
         }
     }
     if keyboard_input.just_released(KeyCode::KeyS) {
-        for (children) in q_ship.iter_mut() {
+        for children in q_ship.iter_mut() {
             for child in children {
                 if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
                     commands.entity(ent_id).remove::<Playing>();
@@ -79,7 +51,7 @@ pub fn emit_collision_particles(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     // mut contact_force_events: EventReader<ContactForceEvent>,
-    mut q_aster: Query<
+    q_aster: Query<
         (&Transform, &CollisionRadius),
         (
             With<AsteroidTag>,
@@ -87,7 +59,7 @@ pub fn emit_collision_particles(
             Without<ProjectileTag>,
         ),
     >,
-    mut q_proj: Query<
+    q_proj: Query<
         (&Transform, &Velocity),
         (
             With<ProjectileTag>,
@@ -95,14 +67,14 @@ pub fn emit_collision_particles(
             Without<PlayerShipTag>,
         ),
     >,
-    mut q_ship: Query<
-        (&Transform),
-        (
-            With<PlayerShipTag>,
-            Without<AsteroidTag>,
-            Without<ProjectileTag>,
-        ),
-    >,
+    // mut q_ship: Query<
+    //     &Transform,
+    //     (
+    //         With<PlayerShipTag>,
+    //         Without<AsteroidTag>,
+    //         Without<ProjectileTag>,
+    //     ),
+    // >,
     thrust_particle_texture: Res<ThrustParticleTexture>,
 ) {
     for event in collision_events.read() {
@@ -113,7 +85,7 @@ pub fn emit_collision_particles(
                 let aster_b_result = q_aster.get(*ent_b);
                 if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
                     let (transform_a, r_a) = aster_a_result.unwrap();
-                    let (transform_b, r_b) = aster_b_result.unwrap();
+                    let (transform_b, _r_b) = aster_b_result.unwrap();
 
                     let normalized =
                         (transform_b.translation - transform_a.translation).normalize();
@@ -328,7 +300,7 @@ pub fn apply_forces_ship(
     }
 }
 
-fn handle_projectile_collision_events(
+pub fn handle_projectile_collision_events(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     collision_sound: Res<ProjectileImpactSound>,

@@ -1,8 +1,6 @@
-use std::f32::consts::PI;
-
 use bevy::math::{EulerRot, Quat, Vec2, Vec3};
 
-use crate::{Speed, DEFAULT_HEADING};
+use crate::game::{Speed, DEFAULT_HEADING};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Heading(pub f32); // degrees
@@ -49,7 +47,7 @@ impl Into<Quat> for Heading {
 
 impl From<Quat> for Heading {
     fn from(quat: Quat) -> Self {
-        let (z_rot, x_rot, y_rot) = quat.to_euler(EulerRot::ZXY);
+        let (z_rot, _x_rot, _y_rot) = quat.to_euler(EulerRot::ZXY);
         Heading(z_rot.to_degrees())
     }
 }
