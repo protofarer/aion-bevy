@@ -26,7 +26,6 @@ use crate::play::{
 use crate::utils::Heading;
 
 // NEWTYPES
-// deleteme
 pub type Speed = f32;
 pub type TurnSpeed = f32;
 
