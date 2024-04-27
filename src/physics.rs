@@ -2,8 +2,8 @@ use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_particle_systems::{
-    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
-    ParticleSystemBundle, Playing,
+    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, Lerp, ParticleBurst,
+    ParticleSystem, ParticleSystemBundle, Playing, ValueOverTime,
 };
 use bevy_rapier2d::prelude::*;
 
@@ -67,19 +67,20 @@ pub fn emit_collision_particles(
             Without<PlayerShipTag>,
         ),
     >,
-    // mut q_ship: Query<
-    //     &Transform,
-    //     (
-    //         With<PlayerShipTag>,
-    //         Without<AsteroidTag>,
-    //         Without<ProjectileTag>,
-    //     ),
-    // >,
+    mut q_ship: Query<
+        &Transform,
+        (
+            With<PlayerShipTag>,
+            Without<AsteroidTag>,
+            Without<ProjectileTag>,
+        ),
+    >,
     thrust_particle_texture: Res<ThrustParticleTexture>,
 ) {
     for event in collision_events.read() {
         match event {
             CollisionEvent::Started(ent_a, ent_b, _flags) => {
+                // ASTEROID - ASTEROID CLASH
                 // TODO refactor into a function: f(q_aster, ent_a, ent_b) -> (bool, result_a.unwrapped, result_b.unwrapped)
                 let aster_a_result = q_aster.get(*ent_a);
                 let aster_b_result = q_aster.get(*ent_b);
@@ -161,6 +162,8 @@ pub fn emit_collision_particles(
                         })
                         .insert(Playing);
                 }
+
+                // PROJECTILE CLINKS
 
                 if let Ok((transform, velocity)) = q_proj.get(*ent_a) {
                     // f(commands, transf, vel) {}
@@ -250,6 +253,65 @@ pub fn emit_collision_particles(
                         })
                         .insert(Playing);
                 }
+
+                if let Ok((transform)) = q_ship.get(*ent_a) {
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 25,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 0.0.into(),
+                                initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
+                                lifetime: JitteredValue::jittered(3.0, -0.5..0.0),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::RED, 0.0),
+                                    CurvePoint::new(Color::BLACK, 0.5),
+                                    CurvePoint::new(Color::BLACK, 1.0),
+                                ])),
+                                looping: false,
+                                system_duration_seconds: 1.0,
+                                max_distance: Some(500.0),
+                                scale: 3.0.into(),
+                                // scale: ValueOverTime::Lerp(Lerp::new(2.0, 20.)),
+                                bursts: vec![ParticleBurst::new(0.0, 25)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(
+                                transform.translation.x,
+                                transform.translation.y,
+                                0.0,
+                            ),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                }
+
+                if let Ok((transform)) = q_ship.get(*ent_b) {
+                    commands
+                        .spawn(ParticleSystemBundle {
+                            particle_system: ParticleSystem {
+                                max_particles: 25,
+                                texture: thrust_particle_texture.0.clone().into(),
+                                spawn_rate_per_second: 0.0.into(),
+                                initial_speed: JitteredValue::jittered(700.0, -50.0..0.0),
+                                lifetime: JitteredValue::jittered(2.0, -0.5..0.0),
+                                color: ColorOverTime::Constant((Color::RED)),
+                                looping: false,
+                                system_duration_seconds: 2.0,
+                                max_distance: Some(500.0),
+                                scale: 1.0.into(),
+                                bursts: vec![ParticleBurst::new(0.0, 25)],
+                                ..ParticleSystem::default()
+                            },
+                            transform: Transform::from_xyz(
+                                transform.translation.x,
+                                transform.translation.y,
+                                3.0,
+                            ),
+                            ..ParticleSystemBundle::default()
+                        })
+                        .insert(Playing);
+                }
             }
             _ => {}
         }
@@ -300,7 +362,10 @@ pub fn apply_forces_ship(
     }
 }
 
-pub fn handle_projectile_collision_events(
+// * when complexity of game rises, limit this to EMIT EVENTS
+// - OPTION A: emit phenomenological / qualitative / "object" events like: Death, Hurt, Impact, Score, Level up. Each receiving system does everything: sound, particles, graphics, UI, damage, spawn, destroy
+// - OPTION B: emit quantitative / discrete events like: damage, sound, particle, animate, UI, spawn, destroy. Each handled by a separate system.
+pub fn resolve_collisions(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     collision_sound: Res<ProjectileImpactSound>,

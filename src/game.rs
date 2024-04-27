@@ -17,8 +17,7 @@ use crate::audio::{
 use crate::avatars::{gen_asteroid, gen_playership};
 use crate::components::{Score, ScoreboardUi};
 use crate::physics::{
-    apply_forces_ship, emit_collision_particles, emit_thruster_particles,
-    handle_projectile_collision_events,
+    apply_forces_ship, emit_collision_particles, emit_thruster_particles, resolve_collisions,
 };
 use crate::play::{
     despawn_delay, draw_boundary, draw_line, play_plugin, ship_fire, ship_turn, update_scoreboard,

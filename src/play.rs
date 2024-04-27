@@ -23,8 +23,7 @@ use crate::{
         SCORE_COLOR, TOP_WALL,
     },
     physics::{
-        apply_forces_ship, emit_collision_particles, emit_thruster_particles,
-        handle_projectile_collision_events,
+        apply_forces_ship, emit_collision_particles, emit_thruster_particles, resolve_collisions,
     },
     utils::Heading,
 };
@@ -39,9 +38,9 @@ pub fn play_plugin(app: &mut App) {
                 ship_fire,
                 despawn_delay,
                 apply_forces_ship,
-                handle_projectile_collision_events, // check_for_collisions,
-                                                    // play_collision_sound,
-                                                    // process_score,
+                resolve_collisions, // check_for_collisions,
+                                    // play_collision_sound,
+                                    // process_score,
             )
                 .chain()
                 .run_if(in_state(GameState::Play)),
