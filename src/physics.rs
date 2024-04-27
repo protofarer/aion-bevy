@@ -429,6 +429,10 @@ pub fn handle_projectile_collision_events(
                                     source: destroy_ship_sound.0.clone(),
                                     settings: PlaybackSettings::DESPAWN,
                                 });
+                                commands.spawn(AudioBundle {
+                                    source: damage_ship_sound.0.clone(),
+                                    settings: PlaybackSettings::DESPAWN,
+                                });
                                 commands.entity(ship_id).despawn();
                             } else {
                                 if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {

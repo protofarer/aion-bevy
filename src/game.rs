@@ -21,12 +21,12 @@ use crate::physics::{
     handle_projectile_collision_events,
 };
 use crate::play::{
-    despawn_delay, draw_boundary, draw_line, ship_fire, ship_turn, update_scoreboard, wraparound,
+    despawn_delay, draw_boundary, draw_line, play_plugin, ship_fire, ship_turn, update_scoreboard,
+    wraparound,
 };
 use crate::utils::Heading;
 
 // NEWTYPES
-// foof
 pub type Speed = f32;
 pub type TurnSpeed = f32;
 
@@ -86,35 +86,21 @@ pub const LARGE_ASTEROID_HEALTH: i32 = 5;
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
         .add_plugins(RapierDebugRenderPlugin::default())
-        .add_systems(Startup, (load_assets, setup_game).chain())
-        .add_systems(
-            FixedUpdate,
-            (
-                ship_turn,
-                wraparound,
-                ship_fire,
-                despawn_delay,
-                apply_forces_ship,
-                handle_projectile_collision_events, // check_for_collisions,
-                                                    // play_collision_sound,
-                                                    // process_score,
-            )
-                .chain(),
-        )
-        .add_systems(
-            Update,
-            (
-                bevy::window::close_on_esc,
-                draw_boundary,
-                draw_line,
-                update_scoreboard,
-                emit_thruster_particles,
-                emit_collision_particles,
-            ),
-        )
+        .add_plugins(play_plugin)
+        .insert_resource(Score(0))
+        .init_state::<GameState>()
+        .add_systems(Startup, (load_assets, setup_menu).chain())
         // .configure_sets(Update, PlaySet.run_if(in_state(GameState::Match)))
         // .configure_sets(FixedUpdate, PlaySet.run_if(in_state(GameState::Match)))
-        .insert_resource(Score(0));
+        ;
+}
+
+pub fn setup_menu(
+    mut commands: Commands,
+    mut game_state: ResMut<NextState<GameState>>, // mut meshes: ResMut<Assets<Mesh>>,
+                                                  // mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    game_state.set(GameState::Play);
 }
 
 pub fn load_assets(
@@ -142,7 +128,10 @@ pub fn load_assets(
     let destroy_asteroid_sound = asset_server.load("sounds/destroy_asteroid.wav");
     commands.insert_resource(AsteroidDestroyedSound(destroy_asteroid_sound));
 
-    let damage_ship_sound = asset_server.load("sounds/ship_damage.wav");
+    // let moderate_thud_sound = asset_server.load("sounds/moderate_thud.wav");
+    // commands.insert_resource(SomeThudSound(moderate_thud_sound));
+
+    let damage_ship_sound = asset_server.load("sounds/damage_ship.wav");
     commands.insert_resource(ShipDamagedSound(damage_ship_sound));
 
     let destroy_ship_sound = asset_server.load("sounds/human_physical_death.wav");
@@ -178,286 +167,41 @@ pub fn load_assets(
     commands.insert_resource(ThrustParticleTexture(thruster_particle_texture));
 }
 
-pub fn setup_game(
-    mut commands: Commands,
-    // mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<ColorMaterial>>,
-    asteroid_mesh_handles: Res<AsteroidMeshHandles>,
-    asteroid_material_handles: Res<AsteroidMaterialHandles>,
-    playership_mesh_handle: Res<PlayerShipMeshHandle>,
-    playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
-    asset_server: Res<AssetServer>,
-) {
-    let (ship, children) = gen_playership(
-        playership_mesh_handle.0.clone(),
-        playership_material_handle.0.clone(),
-        0.,
-        0.,
-        None,
-        thrust_particle_texture.0.clone().into(),
-    );
-    commands.spawn(ship).with_children(|parent| {
-        parent.spawn(children.0);
-        parent.spawn(children.1);
-    });
-
-    let ast1 = gen_asteroid(
-        AsteroidSizes::Medium,
-        5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        200.,
-        0.,
-        Velocity {
-            linvel: Heading(0.).linvel(0.),
-            angvel: 0.5,
-        },
-    );
-    commands.spawn(ast1);
-
-    // clashing asteroids
-    let start_x = LEFT_WALL + 50.;
-    let dx = 250.;
-    let y = TOP_WALL - 50.;
-    let separation_y = 150.;
-    let pairs = [
-        (AsteroidSizes::Small, AsteroidSizes::Small),
-        (AsteroidSizes::Small, AsteroidSizes::Medium),
-        (AsteroidSizes::Small, AsteroidSizes::Large),
-        (AsteroidSizes::Medium, AsteroidSizes::Medium),
-        (AsteroidSizes::Medium, AsteroidSizes::Large),
-        (AsteroidSizes::Large, AsteroidSizes::Large),
-    ];
-    for (i, (size_a, size_b)) in pairs.iter().enumerate() {
-        commands.spawn(gen_asteroid(
-            *size_a,
-            5,
-            asteroid_mesh_handles.0.clone(),
-            asteroid_material_handles.0.clone(),
-            start_x + (dx * i as f32),
-            y,
-            Velocity {
-                linvel: Heading(-90.).linvel(20.),
-                angvel: 0.,
-            },
-        ));
-        commands.spawn(gen_asteroid(
-            *size_b,
-            5,
-            asteroid_mesh_handles.0.clone(),
-            asteroid_material_handles.0.clone(),
-            start_x + (dx * i as f32),
-            y - separation_y,
-            Velocity {
-                linvel: Heading(90.).linvel(20.),
-                angvel: 0.,
-            },
-        ));
-    }
-
-    // Diagonal collision, see collision particles
-    commands.spawn(gen_asteroid(
-        AsteroidSizes::Medium,
-        5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        LEFT_WALL + 50.,
-        BOTTOM_WALL + 300.,
-        Velocity {
-            linvel: Heading(-45.).linvel(20.),
-            angvel: 0.,
-        },
-    ));
-    commands.spawn(gen_asteroid(
-        AsteroidSizes::Medium,
-        5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        LEFT_WALL + 130.,
-        BOTTOM_WALL + 230.,
-        Velocity {
-            linvel: Heading(135.).linvel(20.),
-            angvel: 0.,
-        },
-    ));
-    // spawn for test
-    // let n = 15.;
-    // let dx = (RIGHT_WALL - LEFT_WALL) / n;
-    // let mut i = 0;
-    // for sides in [5, 6, 8] {
-    //     for r in [SMALL_ASTEROID_R, MEDIUM_ASTEROID_R, LARGE_ASTEROID_R] {
-    //         let handle_polygon = meshes.add(RegularPolygon::new(r, sides));
-    //         commands.spawn(Asteroid::new(
-    //             LEFT_WALL + 50. + i as f32 * dx,
-    //             250.,
-    //             None,
-    //             handle_polygon.clone(),
-    //             handle_asteroid_colormaterial.clone(),
-    //             r,
-    //         ));
-    //         i += 1;
-    //     }
-    // }
-
-    // let handle_mesh_asteroid_med_5 = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
-    commands.spawn((
-        ScoreboardUi,
-        TextBundle::from_sections([
-            TextSection::new(
-                "Score: ",
-                TextStyle {
-                    font_size: SCOREBOARD_FONT_SIZE,
-                    color: LABEL_COLOR,
-                    ..default()
-                },
-            ),
-            TextSection::from_style(TextStyle {
-                font_size: SCOREBOARD_FONT_SIZE,
-                color: SCORE_COLOR,
-                ..default()
-            }),
-        ])
-        .with_style(Style {
-            position_type: PositionType::Absolute,
-            top: SCOREBOARD_TEXT_PADDING * 10.,
-            right: SCOREBOARD_TEXT_PADDING,
-            ..default()
-        }),
-    ));
-
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 10_000,
-    //             texture: ParticleTexture::Sprite(asset_server.load("my_particle.png")),
-    //             spawn_rate_per_second: 25.0.into(),
-    //             initial_speed: JitteredValue::jittered(3.0, -1.0..1.0),
-    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
-    //             color: ColorOverTime::Gradient(Gradient::new(vec![
-    //                 ColorPoint::new(Color::WHITE, 0.0),
-    //                 ColorPoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             looping: true,
-    //             system_duration_seconds: 10.0,
-    //             ..ParticleSystem::default()
-    //         },
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing);
-
-    // CIRCULAR OUTWARD
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 1_000,
-    //             texture: asset_server.load("px.png").into(),
-    //             spawn_rate_per_second: 10.0.into(),
-    //             initial_speed: JitteredValue::jittered(200.0, -50.0..50.0),
-    //             velocity_modifiers: vec![Drag(0.01.into())],
-    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
-    //             color: ColorOverTime::Gradient(Curve::new(vec![
-    //                 CurvePoint::new(Color::PURPLE, 0.0),
-    //                 CurvePoint::new(Color::RED, 0.5),
-    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             looping: true,
-    //             system_duration_seconds: 10.0,
-    //             max_distance: Some(100.0),
-    //             scale: 1.0.into(),
-    //             bursts: vec![
-    //                 ParticleBurst::new(0.0, 100),
-    //                 ParticleBurst::new(2.0, 100),
-    //                 ParticleBurst::new(4.0, 100),
-    //                 ParticleBurst::new(6.0, 100),
-    //                 ParticleBurst::new(8.0, 100),
-    //             ],
-    //             ..ParticleSystem::default()
-    //         },
-    //         transform: Transform::from_xyz(LEFT_WALL + 25., BOTTOM_WALL + 25., 0.0),
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing);
-
-    // STRAIGHT EMIT,eg: tracers, laser residue
-    commands
-        .spawn(ParticleSystemBundle {
-            particle_system: ParticleSystem {
-                max_particles: 50_000,
-                texture: asset_server.load("px.png").into(),
-                spawn_rate_per_second: 10.0.into(),
-                initial_speed: JitteredValue::jittered(70.0, -3.0..3.0),
-                lifetime: JitteredValue::jittered(3.0, -2.0..2.0),
-                color: ColorOverTime::Gradient(Curve::new(vec![
-                    CurvePoint::new(Color::PURPLE, 0.0),
-                    CurvePoint::new(Color::RED, 0.5),
-                    CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-                ])),
-                emitter_shape: EmitterShape::line(200.0, std::f32::consts::FRAC_PI_4),
-                looping: true,
-                rotate_to_movement_direction: true,
-                initial_rotation: (-90.0_f32).to_radians().into(),
-                system_duration_seconds: 10.0,
-                max_distance: Some(300.0),
-                scale: 1.0.into(),
-                ..ParticleSystem::default()
-            },
-            transform: Transform::from_xyz(LEFT_WALL + 100., BOTTOM_WALL + 100., 0.0),
-            ..ParticleSystemBundle::default()
-        })
-        .insert(Playing);
-
-    // CONE, eg: ship exhaust, weapon muzzle flash
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 1000,
-    //             texture: thrust_particle_texture.0.clone().into(),
-    //             spawn_rate_per_second: 50.0.into(),
-    //             initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
-    //             lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
-    //             color: ColorOverTime::Gradient(Curve::new(vec![
-    //                 CurvePoint::new(Color::PURPLE, 0.0),
-    //                 CurvePoint::new(Color::RED, 0.5),
-    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             emitter_shape: CircleSegment {
-    //                 radius: 30.0.into(),
-    //                 opening_angle: std::f32::consts::PI / 12.,
-    //                 direction_angle: PI,
-    //             }
-    //             .into(),
-    //             looping: true,
-    //             rotate_to_movement_direction: true,
-    //             initial_rotation: (0.0_f32).to_radians().into(),
-    //             system_duration_seconds: 10.0,
-    //             max_distance: Some(200.0),
-    //             scale: 1.0.into(),
-    //             ..ParticleSystem::default()
-    //         },
-    //         transform: Transform::from_xyz(30., 0., 0.0),
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing);
+#[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum GameState {
+    Menu,
+    #[default]
+    Play,
+    End,
 }
 
+#[derive(Component)]
+pub struct OnPlayScreen;
+
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
-struct PlaySet;
+pub struct PlaySet;
 
 #[derive(Resource)]
-pub struct AsteroidMeshHandles(Vec<Handle<Mesh>>);
+pub struct AsteroidMeshHandles(pub Vec<Handle<Mesh>>);
 
 #[derive(Resource)]
-pub struct AsteroidMaterialHandles(Vec<Handle<ColorMaterial>>);
+pub struct AsteroidMaterialHandles(pub Vec<Handle<ColorMaterial>>);
 
 #[derive(Resource)]
-pub struct PlayerShipMeshHandle(Handle<Mesh>);
+pub struct PlayerShipMeshHandle(pub Handle<Mesh>);
 
 #[derive(Resource)]
-pub struct PlayerShipMaterialHandle(Handle<ColorMaterial>);
+pub struct PlayerShipMaterialHandle(pub Handle<ColorMaterial>);
 
 #[derive(Resource)]
-pub struct ParticleMeshHandle(Handle<Mesh>);
+pub struct ParticleMeshHandle(pub Handle<Mesh>);
 
 #[derive(Resource)]
 pub struct ThrustParticleTexture(pub Handle<Image>);
+
+pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+    for entity in to_despawn.iter() {
+        // println!("despawning entity {:?}", entity);
+        commands.entity(entity).despawn_recursive();
+    }
+}
