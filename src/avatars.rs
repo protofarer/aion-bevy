@@ -170,7 +170,7 @@ pub struct ThrusterBundle {
 }
 
 impl ThrusterBundle {
-    pub fn new(x: f32, y: f32, thrust: f32, particle_texture: ParticleTexture) -> ThrusterBundle {
+    pub fn new(_x: f32, _y: f32, thrust: f32, particle_texture: ParticleTexture) -> ThrusterBundle {
         ThrusterBundle {
             thrust: Thrust(thrust),
             particles: ParticleSystemBundle {

@@ -55,12 +55,11 @@ pub fn play_plugin(app: &mut App) {
                     update_scoreboard,
                     emit_thruster_particles,
                     emit_collision_particles,
-                    restart_play,
                 )
                     .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)
                     .chain()
-                    .run_if(pressed_r),
+                    .run_if(press_r_restart_play),
             ),
         )
         .add_systems(OnExit(GameState::Play), despawn_screen::<OnPlayScreen>);
@@ -446,16 +445,18 @@ pub fn ship_fire(
                                 let (_scale, rotation, translation) =
                                     global_transform.to_scale_rotation_translation();
 
-                                commands.spawn(ProjectileBundle::new(
-                                    translation.x,
-                                    translation.y,
-                                    Some(rotation.into()),
-                                    Some(emitter.projectile_speed),
-                                    None,
-                                    Some(emitter.damage),
-                                    None,
-                                    None,
-                                )).insert(OnPlayScreen);
+                                commands
+                                    .spawn(ProjectileBundle::new(
+                                        translation.x,
+                                        translation.y,
+                                        Some(rotation.into()),
+                                        Some(emitter.projectile_speed),
+                                        None,
+                                        Some(emitter.damage),
+                                        None,
+                                        None,
+                                    ))
+                                    .insert(OnPlayScreen);
                                 commands.spawn(AudioBundle {
                                     source: fire_sound.0.clone(),
                                     ..default()
@@ -488,16 +489,6 @@ pub fn despawn_delay(
     }
 }
 
-pub fn restart_play(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut game_state: ResMut<NextState<GameState>>,
-) {
-    // if keyboard_input.just_pressed(KeyCode::KeyR) {
-    //     info!("read restart cmd");
-    //     game_state.set(GameState::End);
-    // }
-}
-
-pub fn pressed_r(keyboard_input: Res<ButtonInput<KeyCode>>) -> bool {
+pub fn press_r_restart_play(keyboard_input: Res<ButtonInput<KeyCode>>) -> bool {
     keyboard_input.just_pressed(KeyCode::KeyR)
 }
