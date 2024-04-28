@@ -489,24 +489,26 @@ pub fn resolve_collisions(
                         };
 
                         if let Ok(mut ship_health) = q_ship.get_mut(ship_id) {
-                            if ship_health.0 <= 1 {
-                                commands.spawn(AudioBundle {
-                                    source: destroy_ship_sound.0.clone(),
-                                    settings: PlaybackSettings::DESPAWN,
-                                });
-                                commands.spawn(AudioBundle {
-                                    source: damage_ship_sound.0.clone(),
-                                    settings: PlaybackSettings::DESPAWN,
-                                });
-                                commands.entity(ship_id).despawn();
-                            } else {
-                                if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {
-                                    ship_health.0 -= aster_dmg.0;
+                            if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {
+                                ship_health.0 -= aster_dmg.0;
+
+                                if ship_health.0 <= 1 {
+                                    commands.spawn(AudioBundle {
+                                        source: destroy_ship_sound.0.clone(),
+                                        settings: PlaybackSettings::DESPAWN,
+                                    });
+                                    commands.spawn(AudioBundle {
+                                        source: damage_ship_sound.0.clone(),
+                                        settings: PlaybackSettings::DESPAWN,
+                                    });
+                                    commands.entity(ship_id).despawn_recursive();
+                                } else {
                                     commands.spawn(AudioBundle {
                                         source: damage_ship_sound.0.clone(),
                                         settings: PlaybackSettings::DESPAWN,
                                     });
                                 }
+
                             }
                         }
                     }
