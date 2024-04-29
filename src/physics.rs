@@ -293,20 +293,24 @@ pub fn emit_collision_particles(
                                 max_particles: 25,
                                 texture: thrust_particle_texture.0.clone().into(),
                                 spawn_rate_per_second: 0.0.into(),
-                                initial_speed: JitteredValue::jittered(700.0, -50.0..0.0),
-                                lifetime: JitteredValue::jittered(2.0, -0.5..0.0),
-                                color: ColorOverTime::Constant((Color::RED)),
+                                initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
+                                lifetime: JitteredValue::jittered(3.0, -0.5..0.0),
+                                color: ColorOverTime::Gradient(Curve::new(vec![
+                                    CurvePoint::new(Color::RED, 0.0),
+                                    CurvePoint::new(Color::BLACK, 0.5),
+                                    CurvePoint::new(Color::BLACK, 1.0),
+                                ])),
                                 looping: false,
-                                system_duration_seconds: 2.0,
+                                system_duration_seconds: 1.0,
                                 max_distance: Some(500.0),
-                                scale: 1.0.into(),
+                                scale: 3.0.into(),
                                 bursts: vec![ParticleBurst::new(0.0, 25)],
                                 ..ParticleSystem::default()
                             },
                             transform: Transform::from_xyz(
                                 transform.translation.x,
                                 transform.translation.y,
-                                3.0,
+                                0.0,
                             ),
                             ..ParticleSystemBundle::default()
                         })

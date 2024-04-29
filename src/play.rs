@@ -5,7 +5,11 @@ use bevy_particle_systems::{
     ColorOverTime, Curve, CurvePoint, EmitterShape, JitteredValue, ParticleSystem,
     ParticleSystemBundle, Playing,
 };
-use bevy_rapier2d::{dynamics::Velocity, geometry::Collider};
+use bevy_rapier2d::{
+    dynamics::Velocity,
+    geometry::{ActiveEvents, Collider},
+    parry::shape::SharedShape,
+};
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
 use noise::{
     core::perlin::perlin_2d, permutationtable::PermutationTable, utils::PlaneMapBuilder, NoiseFn,
@@ -17,14 +21,15 @@ use crate::{
     audio::ProjectileEmitSound,
     avatars::{gen_asteroid, gen_playership},
     components::{
-        DespawnDelay, FireType, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
+        DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
     },
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        PlayerShipMaterialHandle, PlayerShipMeshHandle, ThrustParticleTexture, BOTTOM_WALL,
-        LABEL_COLOR, LEFT_WALL, RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING,
-        SCORE_COLOR, TOP_WALL,
+        PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupBasicTexture, PowerupComplexTexture,
+        PowerupSimpleTexture, StarBasicTexture, StarComplexTexture, StarSimpleTexture,
+        ThrustParticleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL,
+        RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::{
         apply_forces_ship, emit_collision_particles, emit_thruster_particles, resolve_collisions,
@@ -70,14 +75,21 @@ pub fn play_plugin(app: &mut App) {
 
 pub fn setup_play(
     mut commands: Commands,
+    asset_server: Res<AssetServer>,
     // mut meshes: ResMut<Assets<Mesh>>,
     // mut materials: ResMut<Assets<ColorMaterial>>,
     asteroid_mesh_handles: Res<AsteroidMeshHandles>,
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
+    white_material_handle: Res<WhiteMaterialHandle>,
     thrust_particle_texture: Res<ThrustParticleTexture>,
-    asset_server: Res<AssetServer>,
+    powerup_simple_texture: Res<PowerupSimpleTexture>,
+    powerup_basic_texture: Res<PowerupBasicTexture>,
+    powerup_complex_texture: Res<PowerupComplexTexture>,
+    star_simple_texture: Res<StarSimpleTexture>,
+    star_basic_texture: Res<StarBasicTexture>,
+    star_complex_texture: Res<StarComplexTexture>,
 ) {
     let (ship, children) = gen_playership(
         playership_mesh_handle.0.clone(),
@@ -239,54 +251,129 @@ pub fn setup_play(
     //     .insert(OnPlayScreen);
 
     // let noise = Perlin::new(0);
-    let noise = Perlin::new(1);
-    let width = (RIGHT_WALL - LEFT_WALL);
-    let height = (TOP_WALL - BOTTOM_WALL);
-    for y in (0..height as i32).step_by(20) {
-        for x in (0..width as i32).step_by(20) {
-            let bright = noise.get([
-                x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
-                y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
-            ]);
-            let bright = ((bright + 1.0) / 2.0) as f32;
+    // let width = (RIGHT_WALL - LEFT_WALL);
+    // let height = (TOP_WALL - BOTTOM_WALL);
+    // for y in (0..height as i32).step_by(20) {
+    //     for x in (0..width as i32).step_by(20) {
+    //         let bright = noise.get([
+    //             x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
+    //             y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
+    //         ]);
+    //         let bright = ((bright + 1.0) / 2.0) as f32;
 
-            let dx = (noise.get([
-                x as f64 / (0.2 * width as f64),
-                y as f64 / (0.2 * width as f64),
-                0.0,
-            ]) * 50.) as f32;
-            let dy = (noise.get([
-                y as f64 / (0.2 * height as f64),
-                x as f64 / (0.2 * width as f64),
-                1.0,
-            ]) * 50.) as f32;
-            let dz = ((noise.get([
-                y as f64 / (0.2 * height as f64),
-                x as f64 / (0.2 * width as f64),
-                2.0,
-            ]) as f32)
-                + 1.0 / 2.0)
-                * 3.0;
+    //         let dx = (noise.get([
+    //             x as f64 / (0.2 * width as f64),
+    //             y as f64 / (0.2 * width as f64),
+    //             0.0,
+    //         ]) * 50.) as f32;
+    //         let dy = (noise.get([
+    //             y as f64 / (0.2 * height as f64),
+    //             x as f64 / (0.2 * width as f64),
+    //             1.0,
+    //         ]) * 50.) as f32;
+    //         let dz = ((noise.get([
+    //             y as f64 / (0.2 * height as f64),
+    //             x as f64 / (0.2 * width as f64),
+    //             2.0,
+    //         ]) as f32)
+    //             + 1.0 / 2.0)
+    //             * 3.0;
 
-            commands.spawn(SpriteBundle {
-                sprite: Sprite {
-                    // color: Color::rgba(1. - bright, 0., bright as f32, bright as f32),
-                    color: Color::rgba(1., 1., 1., bright),
-                    ..default()
-                },
-                transform: Transform::from_xyz(
-                    // x as f32 - width / 2.,
-                    // y as f32 - height / 2.,
-                    x as f32 - (width / 2.0) + dx as f32,
-                    y as f32 - (height / 2.0) + dy as f32,
-                    0.0,
-                )
-                // .with_scale(Vec3::splat(dz)),
-                .with_scale(Vec3::splat(1.0)),
+    //         commands.spawn(SpriteBundle {
+    //             sprite: Sprite {
+    //                 // color: Color::rgba(1. - bright, 0., bright as f32, bright as f32),
+    //                 color: Color::rgba(1., 1., 1., bright),
+    //                 ..default()
+    //             },
+    //             transform: Transform::from_xyz(
+    //                 // x as f32 - width / 2.,
+    //                 // y as f32 - height / 2.,
+    //                 x as f32 - (width / 2.0) + dx as f32,
+    //                 y as f32 - (height / 2.0) + dy as f32,
+    //                 0.0,
+    //             )
+    //             // .with_scale(Vec3::splat(dz)),
+    //             .with_scale(Vec3::splat(1.0)),
+    //             ..default()
+    //         });
+    //     }
+    // }
+
+    // Simple powerup, large and easy to get
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
                 ..default()
-            });
-        }
-    }
+            },
+            texture: powerup_simple_texture.0.clone(),
+            transform: Transform::from_xyz(-200., 0., 0.).with_scale(Vec3::splat(0.8)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(20.)),
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+
+    // Basic powerup, moderate size and power
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                ..default()
+            },
+            texture: powerup_basic_texture.0.clone(),
+            transform: Transform::from_xyz(-250., 0., 0.).with_scale(Vec3::splat(0.70)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(10.)),
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+
+    // Complex powerup, small and powerful
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                ..default()
+            },
+            texture: powerup_complex_texture.0.clone(),
+            transform: Transform::from_xyz(-300., 0., 0.).with_scale(Vec3::splat(0.40)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(10.)),
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::WHITE,
+            ..default()
+        },
+        texture: star_simple_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -50., 0.).with_scale(Vec3::splat(0.15)),
+        ..default()
+    },));
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgba(1., 1., 1., 0.8),
+            ..default()
+        },
+        texture: star_basic_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -100., 0.).with_scale(Vec3::splat(0.15)),
+        ..default()
+    },));
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgba(1.0, 0.84, 0.0, 0.5),
+            ..default()
+        },
+        texture: star_complex_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -150., 0.).with_scale(Vec3::splat(0.15)),
+        ..default()
+    },));
 }
 
 pub fn draw_line(mut painter: ShapePainter) {

@@ -85,10 +85,10 @@ pub const LARGE_ASTEROID_HEALTH: i32 = 5;
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
         // .add_plugins(RapierDebugRenderPlugin::default())
-        .add_plugins(play_plugin)
         .insert_resource(Score(0))
         .init_state::<GameState>()
         .add_systems(Startup, (load_assets, setup_menu).chain())
+        .add_plugins(play_plugin)
         // .configure_sets(Update, PlaySet.run_if(in_state(GameState::Match)))
         // .configure_sets(FixedUpdate, PlaySet.run_if(in_state(GameState::Match)))
         ;
@@ -149,6 +149,9 @@ pub fn load_assets(
     let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
     commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
 
+    let handle_white_colormaterial = materials.add(Color::WHITE);
+    commands.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));
+
     let asteroid_material = materials.add(Color::GRAY);
     commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material]));
 
@@ -164,6 +167,22 @@ pub fn load_assets(
 
     let thruster_particle_texture = asset_server.load("px.png").into();
     commands.insert_resource(ThrustParticleTexture(thruster_particle_texture));
+
+    let powerup_simple_texture = asset_server.load("enemy_A.png").into();
+    commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
+
+    let powerup_basic_texture = asset_server.load("enemy_C.png").into();
+    commands.insert_resource(PowerupBasicTexture(powerup_basic_texture));
+
+    let powerup_complex_texture = asset_server.load("enemy_E.png").into();
+    commands.insert_resource(PowerupComplexTexture(powerup_complex_texture));
+
+    let star_simple_texture = asset_server.load("star_04.png").into();
+    commands.insert_resource(StarSimpleTexture(star_simple_texture));
+    let star_basic_texture = asset_server.load("star_06.png").into();
+    commands.insert_resource(StarBasicTexture(star_basic_texture));
+    let star_complex_texture = asset_server.load("star_08.png").into();
+    commands.insert_resource(StarComplexTexture(star_complex_texture));
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -180,6 +199,8 @@ pub struct OnPlayScreen;
 #[derive(SystemSet, Debug, Clone, PartialEq, Eq, Hash)]
 pub struct PlaySet;
 
+// Meshes
+
 #[derive(Resource)]
 pub struct AsteroidMeshHandles(pub Vec<Handle<Mesh>>);
 
@@ -190,13 +211,48 @@ pub struct AsteroidMaterialHandles(pub Vec<Handle<ColorMaterial>>);
 pub struct PlayerShipMeshHandle(pub Handle<Mesh>);
 
 #[derive(Resource)]
+pub struct ParticleMeshHandle(pub Handle<Mesh>);
+
+// Color materials
+#[derive(Resource)]
 pub struct PlayerShipMaterialHandle(pub Handle<ColorMaterial>);
 
 #[derive(Resource)]
-pub struct ParticleMeshHandle(pub Handle<Mesh>);
+pub struct WhiteMaterialHandle(pub Handle<ColorMaterial>);
 
+// Textures
 #[derive(Resource)]
 pub struct ThrustParticleTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct PowerupSimpleTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct PowerupBasicTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct StarSimpleTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct StarBasicTexture(pub Handle<Image>);
+
+
+#[derive(Resource)]
+pub struct StarComplexTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct PowerupComplexTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct Textures {
+    pub thrust_particle: Handle<Image>,
+    pub powerup_simple: Handle<Image>,
+    pub powerup_basic: Handle<Image>,
+    pub powerup_complex: Handle<Image>,
+    pub star_simple: Handle<Image>,
+    pub star_basic: Handle<Image>,
+    pub star_complex: Handle<Image>,
+}
 
 pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
     for entity in to_despawn.iter() {
