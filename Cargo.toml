@@ -12,6 +12,7 @@ bevy_rapier2d = { version = "0.25.0", features = ["debug-render-2d", "simd-stabl
 # also rapier2d features: "enhanced-determinism", "wasm-bindgen"
 bevy_vector_shapes = "0.7.0"
 lazy_static = "1.4.0"
+noise = "0.9.0"
 rand = "0.8.5"
 
 [profile.dev]

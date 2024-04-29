@@ -84,7 +84,7 @@ pub const LARGE_ASTEROID_HEALTH: i32 = 5;
 
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
-        .add_plugins(RapierDebugRenderPlugin::default())
+        // .add_plugins(RapierDebugRenderPlugin::default())
         .add_plugins(play_plugin)
         .insert_resource(Score(0))
         .init_state::<GameState>()

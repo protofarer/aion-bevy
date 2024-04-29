@@ -7,6 +7,10 @@ use bevy_particle_systems::{
 };
 use bevy_rapier2d::{dynamics::Velocity, geometry::Collider};
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
+use noise::{
+    core::perlin::perlin_2d, permutationtable::PermutationTable, utils::PlaneMapBuilder, NoiseFn,
+    Perlin,
+};
 
 use crate::{
     archetypes::{AsteroidSizes, ProjectileBundle},
@@ -178,26 +182,7 @@ pub fn setup_play(
             },
         ))
         .insert(OnPlayScreen);
-    // spawn for test
-    // let n = 15.;
-    // let dx = (RIGHT_WALL - LEFT_WALL) / n;
-    // let mut i = 0;
-    // for sides in [5, 6, 8] {
-    //     for r in [SMALL_ASTEROID_R, MEDIUM_ASTEROID_R, LARGE_ASTEROID_R] {
-    //         let handle_polygon = meshes.add(RegularPolygon::new(r, sides));
-    //         commands.spawn(Asteroid::new(
-    //             LEFT_WALL + 50. + i as f32 * dx,
-    //             250.,
-    //             None,
-    //             handle_polygon.clone(),
-    //             handle_asteroid_colormaterial.clone(),
-    //             r,
-    //         ));
-    //         i += 1;
-    //     }
-    // }
 
-    // let handle_mesh_asteroid_med_5 = meshes.add(RegularPolygon::new(MEDIUM_ASTEROID_R, 5));
     commands
         .spawn((
             ScoreboardUi,
@@ -228,117 +213,80 @@ pub fn setup_play(
     // commands
     //     .spawn(ParticleSystemBundle {
     //         particle_system: ParticleSystem {
-    //             max_particles: 10_000,
-    //             texture: ParticleTexture::Sprite(asset_server.load("my_particle.png")),
-    //             spawn_rate_per_second: 25.0.into(),
-    //             initial_speed: JitteredValue::jittered(3.0, -1.0..1.0),
-    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
-    //             color: ColorOverTime::Gradient(Gradient::new(vec![
-    //                 ColorPoint::new(Color::WHITE, 0.0),
-    //                 ColorPoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             looping: true,
-    //             system_duration_seconds: 10.0,
-    //             ..ParticleSystem::default()
-    //         },
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing);
-
-    // CIRCULAR OUTWARD
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 1_000,
+    //             max_particles: 50_000,
     //             texture: asset_server.load("px.png").into(),
     //             spawn_rate_per_second: 10.0.into(),
-    //             initial_speed: JitteredValue::jittered(200.0, -50.0..50.0),
-    //             velocity_modifiers: vec![Drag(0.01.into())],
-    //             lifetime: JitteredValue::jittered(8.0, -2.0..2.0),
+    //             initial_speed: JitteredValue::jittered(70.0, -3.0..3.0),
+    //             lifetime: JitteredValue::jittered(3.0, -2.0..2.0),
     //             color: ColorOverTime::Gradient(Curve::new(vec![
     //                 CurvePoint::new(Color::PURPLE, 0.0),
     //                 CurvePoint::new(Color::RED, 0.5),
     //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
     //             ])),
-    //             looping: true,
-    //             system_duration_seconds: 10.0,
-    //             max_distance: Some(100.0),
-    //             scale: 1.0.into(),
-    //             bursts: vec![
-    //                 ParticleBurst::new(0.0, 100),
-    //                 ParticleBurst::new(2.0, 100),
-    //                 ParticleBurst::new(4.0, 100),
-    //                 ParticleBurst::new(6.0, 100),
-    //                 ParticleBurst::new(8.0, 100),
-    //             ],
-    //             ..ParticleSystem::default()
-    //         },
-    //         transform: Transform::from_xyz(LEFT_WALL + 25., BOTTOM_WALL + 25., 0.0),
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing);
-
-    // STRAIGHT EMIT,eg: tracers, laser residue
-    commands
-        .spawn(ParticleSystemBundle {
-            particle_system: ParticleSystem {
-                max_particles: 50_000,
-                texture: asset_server.load("px.png").into(),
-                spawn_rate_per_second: 10.0.into(),
-                initial_speed: JitteredValue::jittered(70.0, -3.0..3.0),
-                lifetime: JitteredValue::jittered(3.0, -2.0..2.0),
-                color: ColorOverTime::Gradient(Curve::new(vec![
-                    CurvePoint::new(Color::PURPLE, 0.0),
-                    CurvePoint::new(Color::RED, 0.5),
-                    CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-                ])),
-                emitter_shape: EmitterShape::line(200.0, std::f32::consts::FRAC_PI_4),
-                looping: true,
-                rotate_to_movement_direction: true,
-                initial_rotation: (-90.0_f32).to_radians().into(),
-                system_duration_seconds: 10.0,
-                max_distance: Some(300.0),
-                scale: 1.0.into(),
-                ..ParticleSystem::default()
-            },
-            transform: Transform::from_xyz(LEFT_WALL + 100., BOTTOM_WALL + 100., 0.0),
-            ..ParticleSystemBundle::default()
-        })
-        .insert(Playing)
-        .insert(OnPlayScreen);
-
-    // CONE, eg: ship exhaust, weapon muzzle flash
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 1000,
-    //             texture: thrust_particle_texture.0.clone().into(),
-    //             spawn_rate_per_second: 50.0.into(),
-    //             initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
-    //             lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
-    //             color: ColorOverTime::Gradient(Curve::new(vec![
-    //                 CurvePoint::new(Color::PURPLE, 0.0),
-    //                 CurvePoint::new(Color::RED, 0.5),
-    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             emitter_shape: CircleSegment {
-    //                 radius: 30.0.into(),
-    //                 opening_angle: std::f32::consts::PI / 12.,
-    //                 direction_angle: PI,
-    //             }
-    //             .into(),
+    //             emitter_shape: EmitterShape::line(200.0, std::f32::consts::FRAC_PI_4),
     //             looping: true,
     //             rotate_to_movement_direction: true,
-    //             initial_rotation: (0.0_f32).to_radians().into(),
+    //             initial_rotation: (-90.0_f32).to_radians().into(),
     //             system_duration_seconds: 10.0,
-    //             max_distance: Some(200.0),
+    //             max_distance: Some(300.0),
     //             scale: 1.0.into(),
     //             ..ParticleSystem::default()
     //         },
-    //         transform: Transform::from_xyz(30., 0., 0.0),
+    //         transform: Transform::from_xyz(LEFT_WALL + 100., BOTTOM_WALL + 100., 0.0),
     //         ..ParticleSystemBundle::default()
     //     })
-    //     .insert(Playing);
+    //     .insert(Playing)
+    //     .insert(OnPlayScreen);
+
+    // let noise = Perlin::new(0);
+    let noise = Perlin::new(1);
+    let width = (RIGHT_WALL - LEFT_WALL);
+    let height = (TOP_WALL - BOTTOM_WALL);
+    for y in (0..height as i32).step_by(20) {
+        for x in (0..width as i32).step_by(20) {
+            let bright = noise.get([
+                x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
+                y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
+            ]);
+            let bright = ((bright + 1.0) / 2.0) as f32;
+
+            let dx = (noise.get([
+                x as f64 / (0.2 * width as f64),
+                y as f64 / (0.2 * width as f64),
+                0.0,
+            ]) * 50.) as f32;
+            let dy = (noise.get([
+                y as f64 / (0.2 * height as f64),
+                x as f64 / (0.2 * width as f64),
+                1.0,
+            ]) * 50.) as f32;
+            let dz = ((noise.get([
+                y as f64 / (0.2 * height as f64),
+                x as f64 / (0.2 * width as f64),
+                2.0,
+            ]) as f32)
+                + 1.0 / 2.0)
+                * 3.0;
+
+            commands.spawn(SpriteBundle {
+                sprite: Sprite {
+                    // color: Color::rgba(1. - bright, 0., bright as f32, bright as f32),
+                    color: Color::rgba(1., 1., 1., bright),
+                    ..default()
+                },
+                transform: Transform::from_xyz(
+                    // x as f32 - width / 2.,
+                    // y as f32 - height / 2.,
+                    x as f32 - (width / 2.0) + dx as f32,
+                    y as f32 - (height / 2.0) + dy as f32,
+                    0.0,
+                )
+                // .with_scale(Vec3::splat(dz)),
+                .with_scale(Vec3::splat(1.0)),
+                ..default()
+            });
+        }
+    }
 }
 
 pub fn draw_line(mut painter: ShapePainter) {
@@ -454,6 +402,7 @@ pub fn ship_fire(
                                         Some(emitter.damage),
                                         None,
                                         None,
+                                        Some(2.0),
                                     ))
                                     .insert(OnPlayScreen);
                                 commands.spawn(AudioBundle {

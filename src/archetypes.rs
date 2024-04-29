@@ -16,7 +16,10 @@ use crate::{
         ProjectileTag, TurnRate,
     },
     game::{
-        Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL
+        Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+        BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
+        INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH,
+        INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
     },
     utils::Heading,
 };
@@ -107,6 +110,7 @@ impl ParticleBundle {
         heading: Option<Heading>,
         move_speed: Option<Speed>,
         color: Option<Color>,
+        scale: Option<f32>,
     ) -> Self {
         let move_speed = match move_speed {
             Some(x) => x,
@@ -117,11 +121,17 @@ impl ParticleBundle {
             None => Heading::default(),
         };
 
+        let scale = match scale {
+            Some(x) => x,
+            None => 1.0,
+        };
+
         Self {
             sprite: SpriteBundle {
                 transform: Transform {
                     translation: Vec3::new(x, y, 0.),
                     rotation: heading.into(),
+                    scale: Vec3::splat(scale),
                     ..default()
                 },
                 sprite: Sprite {
@@ -182,13 +192,14 @@ impl ProjectileBundle {
         damage: Option<i32>,
         restitution_coeff: Option<f32>,
         gravity_scale: Option<f32>,
+        scale: Option<f32>,
     ) -> Self {
         let projectile_speed = match projectile_speed {
             Some(x) => x,
             None => INIT_SHIP_PROJECTILE_SPEED,
         };
 
-        let particle = ParticleBundle::new(x, y, heading, Some(projectile_speed), color);
+        let particle = ParticleBundle::new(x, y, heading, Some(projectile_speed), color, scale);
         let sprite = particle.sprite;
         let velocity = particle.velocity;
 
@@ -222,7 +233,7 @@ impl ProjectileBundle {
 
 impl Default for ProjectileBundle {
     fn default() -> Self {
-        let particle = ParticleBundle::new(0., 0., None, None, None);
+        let particle = ParticleBundle::new(0., 0., None, None, None, None);
         let sprite = particle.sprite;
         let velocity = particle.velocity;
         Self {
