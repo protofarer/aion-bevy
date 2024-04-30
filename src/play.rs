@@ -30,10 +30,10 @@ use crate::{
     },
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupComplexTexture,
-        PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture, StarSimpleTexture,
-        ThrustParticleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL,
-        RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
+        ParticlePixelTexture, PlayerShipMaterialHandle, PlayerShipMeshHandle,
+        PowerupComplexTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
+        StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
+        SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::{
         apply_forces_ship, emit_thruster_particles, handle_collision_events, post_collision_sounds,
@@ -90,7 +90,7 @@ pub fn setup_play(
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
     white_material_handle: Res<WhiteMaterialHandle>,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
     powerup_essential_texture: Res<PowerupSimpleTexture>,
     powerup_simple_texture: Res<PowerupSimpleTexture>,
     powerup_complex_texture: Res<PowerupComplexTexture>,
@@ -105,7 +105,7 @@ pub fn setup_play(
         &playership_mesh_handle,
         &playership_material_handle,
         None,
-        &thrust_particle_texture,
+        &particle_pixel_texture,
     );
 
     let ast1 = gen_asteroid(
@@ -576,7 +576,7 @@ fn spawn_playership(
     playership_mesh_handle: &PlayerShipMeshHandle,
     playership_material_handle: &PlayerShipMaterialHandle,
     heading: Option<Heading>,
-    thrust_particle_texture: &ThrustParticleTexture,
+    particle_pixel_texture: &ParticlePixelTexture,
 ) {
     let (ship, children) = gen_playership(
         playership_mesh_handle.0.clone(),
@@ -584,7 +584,7 @@ fn spawn_playership(
         x,
         y,
         None,
-        thrust_particle_texture.0.clone().into(),
+        particle_pixel_texture.0.clone().into(),
     );
     commands
         .spawn(ship)

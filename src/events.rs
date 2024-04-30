@@ -6,7 +6,7 @@ use bevy_rapier2d::{dynamics::Velocity, pipeline::CollisionEvent};
 
 use crate::{
     components::{AsteroidTag, CollisionRadius, PlayerShipTag, ProjectileTag},
-    game::ThrustParticleTexture,
+    game::ParticlePixelTexture,
 };
 
 #[derive(Event)]
@@ -28,7 +28,7 @@ pub fn collide_projectile(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     q_proj: Query<(&Transform, &Velocity), (With<ProjectileTag>,)>,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in evr_collisions.read() {
         match event {
@@ -36,7 +36,7 @@ pub fn collide_projectile(
                 if let Ok((transform, velocity)) = q_proj.get(*ent_a) {
                     emit_projectile_collision_particles(
                         &mut commands,
-                        &thrust_particle_texture,
+                        &particle_pixel_texture,
                         transform,
                         velocity,
                     );
@@ -44,7 +44,7 @@ pub fn collide_projectile(
                 if let Ok((transform, velocity)) = q_proj.get(*ent_b) {
                     emit_projectile_collision_particles(
                         &mut commands,
-                        &thrust_particle_texture,
+                        &particle_pixel_texture,
                         transform,
                         velocity,
                     );
@@ -67,7 +67,7 @@ pub fn collide_asteroid_w_asteroid(
             Without<ProjectileTag>,
         ),
     >,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in evr_collisions.read() {
         match event {
@@ -80,7 +80,7 @@ pub fn collide_asteroid_w_asteroid(
                     let (transform_b, _r_b) = aster_b_result.unwrap();
                     emit_asteroid_w_asteroid_collision_particles(
                         &mut commands,
-                        &thrust_particle_texture,
+                        &particle_pixel_texture,
                         transform_a,
                         r_a,
                         transform_b,
@@ -96,7 +96,7 @@ pub fn collide_ship(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     q_ship: Query<&Transform, With<PlayerShipTag>>,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in evr_collisions.read() {
         match event {
@@ -105,7 +105,7 @@ pub fn collide_ship(
                     emit_ship_collision_particles(
                         &mut commands,
                         &transform,
-                        &thrust_particle_texture,
+                        &particle_pixel_texture,
                     );
                 }
 
@@ -113,7 +113,7 @@ pub fn collide_ship(
                     emit_ship_collision_particles(
                         &mut commands,
                         &transform,
-                        &thrust_particle_texture,
+                        &particle_pixel_texture,
                     );
                 }
             }
@@ -124,7 +124,7 @@ pub fn collide_ship(
 
 fn emit_projectile_collision_particles(
     commands: &mut Commands,
-    thrust_particle_texture: &Res<ThrustParticleTexture>,
+    particle_pixel_texture: &Res<ParticlePixelTexture>,
     transform: &Transform,
     velocity: &Velocity,
 ) {
@@ -133,7 +133,7 @@ fn emit_projectile_collision_particles(
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 6,
-                texture: thrust_particle_texture.0.clone().into(),
+                texture: particle_pixel_texture.0.clone().into(),
                 spawn_rate_per_second: 0.0.into(),
                 // TODO scale with proj velocity
                 initial_speed: JitteredValue::jittered(30.0, -10.0..0.0),
@@ -167,7 +167,7 @@ fn emit_projectile_collision_particles(
 
 fn emit_asteroid_w_asteroid_collision_particles(
     commands: &mut Commands,
-    thrust_particle_texture: &ThrustParticleTexture,
+    particle_pixel_texture: &ParticlePixelTexture,
     transform_a: &Transform,
     r_a: &CollisionRadius,
     transform_b: &Transform,
@@ -181,7 +181,7 @@ fn emit_asteroid_w_asteroid_collision_particles(
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 200,
-                texture: thrust_particle_texture.0.clone().into(),
+                texture: particle_pixel_texture.0.clone().into(),
                 spawn_rate_per_second: 10.0.into(),
                 initial_speed: JitteredValue::jittered(20.0, -15.0..10.0),
                 lifetime: JitteredValue::jittered(2.0, -0.5..0.5),
@@ -214,7 +214,7 @@ fn emit_asteroid_w_asteroid_collision_particles(
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 200,
-                texture: thrust_particle_texture.0.clone().into(),
+                texture: particle_pixel_texture.0.clone().into(),
                 spawn_rate_per_second: 10.0.into(),
                 initial_speed: JitteredValue::jittered(20.0, -15.0..10.0),
                 lifetime: JitteredValue::jittered(2.0, -0.5..0.5),
@@ -248,13 +248,13 @@ fn emit_asteroid_w_asteroid_collision_particles(
 fn emit_ship_collision_particles(
     commands: &mut Commands,
     transform: &Transform,
-    thrust_particle_texture: &ThrustParticleTexture,
+    particle_pixel_texture: &ParticlePixelTexture,
 ) {
     commands
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 25,
-                texture: thrust_particle_texture.0.clone().into(),
+                texture: particle_pixel_texture.0.clone().into(),
                 spawn_rate_per_second: 0.0.into(),
                 initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
                 lifetime: JitteredValue::jittered(3.0, -0.5..0.0),

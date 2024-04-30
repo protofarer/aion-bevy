@@ -18,7 +18,7 @@ use crate::{
         Score,
     },
     events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
-    game::ThrustParticleTexture,
+    game::ParticlePixelTexture,
     utils::Heading,
 };
 
@@ -78,7 +78,7 @@ pub fn handle_collision_events(
             Without<ProjectileTag>,
         ),
     >,
-    thrust_particle_texture: Res<ThrustParticleTexture>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in collision_events.read() {
         match event {

@@ -166,7 +166,7 @@ pub fn load_assets(
     commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
     let thruster_particle_texture = asset_server.load("px.png").into();
-    commands.insert_resource(ThrustParticleTexture(thruster_particle_texture));
+    commands.insert_resource(ParticlePixelTexture(thruster_particle_texture));
 
     let powerup_essential_texture = asset_server.load("enemy_A.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_essential_texture));
@@ -220,7 +220,7 @@ pub struct WhiteMaterialHandle(pub Handle<ColorMaterial>);
 
 // Textures
 #[derive(Resource)]
-pub struct ThrustParticleTexture(pub Handle<Image>);
+pub struct ParticlePixelTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct PowerupEssentialTexture(pub Handle<Image>);
@@ -242,7 +242,7 @@ pub struct StarComplexTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct Textures {
-    pub thrust_particle: Handle<Image>,
+    pub particle_pixel: Handle<Image>,
     pub powerup_simple: Handle<Image>,
     pub powerup_basic: Handle<Image>,
     pub powerup_complex: Handle<Image>,
