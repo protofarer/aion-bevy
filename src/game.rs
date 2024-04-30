@@ -16,9 +16,7 @@ use crate::audio::{
 };
 use crate::avatars::{gen_asteroid, gen_playership_from_materialmesh};
 use crate::components::{Score, ScoreboardUi};
-use crate::physics::{
-    apply_forces_ship, emit_thruster_particles, handle_collision_events, post_collision_sounds,
-};
+use crate::physics::{apply_forces_ship, emit_collision_effects_fixme, emit_thruster_particles};
 use crate::play::{
     despawn_delay, draw_boundary, draw_line, play_plugin, ship_fire, ship_turn, update_scoreboard,
     wraparound,
@@ -165,8 +163,11 @@ pub fn load_assets(
     }
     commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
-    let thruster_particle_texture = asset_server.load("px.png").into();
-    commands.insert_resource(ParticlePixelTexture(thruster_particle_texture));
+    let playership_texture = asset_server.load("ship_K.png").into();
+    commands.insert_resource(PlayerShipTexture(playership_texture));
+
+    let particle_pixel_texture = asset_server.load("px.png").into();
+    commands.insert_resource(ParticlePixelTexture(particle_pixel_texture));
 
     let powerup_essential_texture = asset_server.load("enemy_A.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_essential_texture));
@@ -182,8 +183,12 @@ pub fn load_assets(
     let star_complex_texture = asset_server.load("star_08.png").into();
     commands.insert_resource(StarComplexTexture(star_complex_texture));
 
-    let playership_texture = asset_server.load("ship_K.png").into();
-    commands.insert_resource(PlayerShipTexture(playership_texture));
+    let green_planet_texture = asset_server.load("planet00.png").into();
+    commands.insert_resource(PlanetGreenTexture(green_planet_texture));
+    let grey_planet_texture = asset_server.load("planet04.png").into();
+    commands.insert_resource(PlanetGreyTexture(grey_planet_texture));
+    let purple_planet_texture = asset_server.load("planet09.png").into();
+    commands.insert_resource(PlanetPurpleTexture(purple_planet_texture));
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -245,6 +250,13 @@ pub struct StarComplexTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct PlayerShipTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct PlanetGreenTexture(pub Handle<Image>);
+#[derive(Resource)]
+pub struct PlanetGreyTexture(pub Handle<Image>);
+#[derive(Resource)]
+pub struct PlanetPurpleTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct Textures {

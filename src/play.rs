@@ -25,18 +25,21 @@ use crate::{
         ScoreboardUi, TurnRate,
     },
     events::{
-        collide_asteroid_w_asteroid, collide_projectile, collide_ship,
-        CollisionAsteroidAsteroidEvent, CollisionProjectileEvent,
+        effects_projectile_collision, handle_destruction_events,
+        update_collide_asteroid_w_asteroid, update_collide_ship, CollisionAsteroidAsteroidEvent,
+        CollisionProjectileEvent,
     },
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        ParticlePixelTexture, PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture,
-        PowerupComplexTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
-        StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
-        SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
+        ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
+        PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
+        PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture, StarSimpleTexture,
+        WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL, SCOREBOARD_FONT_SIZE,
+        SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::{
-        apply_forces_ship, emit_thruster_particles, handle_collision_events, post_collision_sounds,
+        apply_forces_ship, emit_collision_effects_fixme, emit_destruction_effects,
+        emit_thruster_particles,
     },
     utils::Heading,
 };
@@ -47,10 +50,12 @@ pub fn play_plugin(app: &mut App) {
             FixedUpdate,
             (
                 ship_turn,
+                apply_forces_ship,
                 wraparound,
                 ship_fire,
+                emit_collision_effects,
+                emit_destruction_effects,
                 despawn_delay,
-                apply_forces_ship,
             )
                 .chain()
                 .run_if(in_state(GameState::Play)),
@@ -59,16 +64,16 @@ pub fn play_plugin(app: &mut App) {
             Update,
             (
                 (
+                    handle_destruction_events,
                     draw_boundary,
                     draw_line,
                     update_scoreboard,
-                    handle_collision_events,
                     emit_thruster_particles,
-                    collide_asteroid_w_asteroid,
-                    collide_projectile,
-                    collide_ship,
-                    post_collision_sounds,
-                    print_ship_heading
+                    update_collide_asteroid_w_asteroid,
+                    effects_projectile_collision,
+                    update_collide_ship,
+                    emit_collision_effects_fixme,
+                    print_ship_heading,
                 )
                     .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)
@@ -99,6 +104,9 @@ pub fn setup_play(
     star_essential_texture: Res<StarEssentialTexture>,
     star_simple_texture: Res<StarSimpleTexture>,
     star_complex_texture: Res<StarComplexTexture>,
+    green_planet_texture: Res<PlanetGreenTexture>,
+    // grey_planet_texture: Res<PlanetGreyTexture>,
+    // purple_planet_texture: Res<PlanetPurpleTexture>,
 ) {
     spawn_playership(
         0.,
@@ -309,6 +317,19 @@ pub fn setup_play(
     spawn_essential_star(&mut commands, &star_essential_texture);
     spawn_simple_star(&mut commands, &star_simple_texture);
     spawn_complex_star(&mut commands, &star_complex_texture);
+
+    // spawn_complex_star(&mut commands, &star_complex_texture);
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            // GOLD
+            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
+            // color: Color::rgba(1., 1., 1., 0.7),
+            ..default()
+        },
+        texture: green_planet_texture.0.clone(),
+        transform: Transform::from_xyz(200., -100., 0.).with_scale(Vec3::splat(0.10)),
+        ..default()
+    },));
 }
 
 pub fn draw_line(mut painter: ShapePainter) {
@@ -591,6 +612,5 @@ fn spawn_playership(
 fn print_ship_heading(mut query: Query<&Transform, With<PlayerShipTag>>) {
     for transform in query.iter() {
         let heading = Heading::from(transform.rotation);
-        println!("Ship heading: {:?}", heading);
     }
 }

@@ -54,6 +54,7 @@ pub fn gen_playership(
                 texture: texture.0.clone().into(),
                 transform: Transform {
                     translation: Vec3::new(x, y, 1.),
+                    scale: Vec2::splat(0.8).extend(1.),
                     // rotation: heading.unwrap_or_default().into(),
                     ..default()
                 },
@@ -120,7 +121,7 @@ impl ProjectileEmitterBundle {
             emitter: ProjectileEmission::default(),
             transform: TransformBundle {
                 local: Transform {
-                    translation: Vec3::new(heading.0.cos(), heading.0.sin(), 0.) * 1.05 * r,
+                    translation: Vec3::new(heading.x(), heading.y(), 0.) * 1.05 * r,
                     rotation: heading.into(),
                     ..default()
                 },
@@ -192,7 +193,7 @@ impl ThrusterBundle {
                         radius: 30.0.into(),
                         opening_angle: std::f32::consts::PI / 12.,
                         // direction_angle: Heading::default().to_radians() + PI,
-                        direction_angle: PI,
+                        direction_angle: -PI / 2.0,
                     }
                     .into(),
                     looping: true,
@@ -203,7 +204,7 @@ impl ThrusterBundle {
                     scale: 1.0.into(),
                     ..ParticleSystem::default()
                 },
-                transform: Transform::from_xyz(20., 0., 0.0),
+                transform: Transform::from_xyz(0., 20., 0.0),
                 ..ParticleSystemBundle::default()
             },
         }

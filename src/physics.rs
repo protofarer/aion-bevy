@@ -17,79 +17,90 @@ use crate::{
         AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
         Score,
     },
-    events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
+    events::{
+        Avatars, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent, EffectsDestroyEvent,
+    },
     game::ParticlePixelTexture,
     utils::Heading,
 };
 
-pub fn emit_thruster_particles(
+pub fn collide_projectiles(
     mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
-    mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
+    mut evr_collisions: EventReader<CollisionEvent>,
+    q_proj: Query<&Damage, With<ProjectileTag>>,
+    mut q_health: Query<&mut Health, Without<ProjectileTag>>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
-    if keyboard_input.pressed(KeyCode::KeyS) {
-        for children in q_ship_children.iter_mut() {
-            for child in children {
-                if let Ok(ent_id) = q_particle_system.get_mut(*child) {
-                    commands.entity(ent_id).insert(Playing);
+    for event in evr_collisions.read() {
+        match event {
+            CollisionEvent::Started(ent_a, ent_b, _flags) => {
+                if let Ok(proj_dmg) = q_proj.get(*ent_a) {
+                    if let Ok(mut other_health) = q_health.get_mut(*ent_b) {
+                        other_health.0 -= proj_dmg.0;
+                    }
                 }
             }
+            _ => {}
         }
     }
-    if keyboard_input.just_released(KeyCode::KeyS) {
-        for children in q_ship_children.iter_mut() {
-            for child in children {
-                if let Ok(ent_id) = q_particle_system.get_mut(*child) {
-                    commands.entity(ent_id).remove::<Playing>();
-                }
+    // TODO projectile collisions with other entities fixedupdate code
+    // if other ent has health component and damageable by projectile (which all are in this version), subtract health and determine death events
+}
+
+// TODO move to effects.rs
+pub fn emit_destruction_effects(
+    mut commands: Commands,
+    mut ev_w: EventWriter<EffectsDestroyEvent>,
+    mut q_health: Query<(Entity, &Health)>,
+    q_aster: Query<(), With<AsteroidTag>>,
+    q_ship: Query<(), With<PlayerShipTag>>,
+) {
+    for (ent_id, health) in q_health.iter() {
+        if let Ok(()) = q_aster.get(ent_id) {
+            if health.0 <= 0 {
+                ev_w.send(EffectsDestroyEvent {
+                    translation: Vec2::new(0., 0.),
+                    avatar: Avatars::Asteroid,
+                });
+            }
+        }
+        if let Ok(()) = q_ship.get(ent_id) {
+            if health.0 <= 0 {
+                ev_w.send(EffectsDestroyEvent {
+                    translation: Vec2::new(0., 0.),
+                    avatar: Avatars::PlayerShip,
+                });
             }
         }
     }
 }
 
-pub fn handle_collision_events(
+// TODO this is an effect
+pub fn emit_thruster_particles(
     mut commands: Commands,
-    mut collision_events: EventReader<CollisionEvent>,
-    mut ev_aster_aster: EventWriter<CollisionAsteroidAsteroidEvent>,
-    mut ev_proj: EventWriter<CollisionProjectileEvent>,
-    // mut contact_force_events: EventReader<ContactForceEvent>,
-    q_aster: Query<
-        (&Transform, &CollisionRadius),
-        (
-            With<AsteroidTag>,
-            Without<PlayerShipTag>,
-            Without<ProjectileTag>,
-        ),
-    >,
-    q_proj: Query<
-        (),
-        (
-            With<ProjectileTag>,
-            Without<AsteroidTag>,
-            Without<PlayerShipTag>,
-        ),
-    >,
-    mut q_ship: Query<
-        &Transform,
-        (
-            With<PlayerShipTag>,
-            Without<AsteroidTag>,
-            Without<ProjectileTag>,
-        ),
-    >,
-    particle_pixel_texture: Res<ParticlePixelTexture>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    q_ship_exists: Query<(), With<PlayerShipTag>>,
+    mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
+    mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
 ) {
-    for event in collision_events.read() {
-        match event {
-            CollisionEvent::Started(ent_a, ent_b, _flags) => {
-                // ASTEROID - ASTEROID CLASH
-                // TODO refactor into a function: f(q_aster, ent_a, ent_b) -> (bool, result_a.unwrapped, result_b.unwrapped)
-                // do a fancy enum pattern match, where all queries are run
-                // against the ents, efficiently, and spit out the ent id along
-                // with a enum representing the avatar
+    if q_ship_exists.get_single().is_ok() {
+        if keyboard_input.pressed(KeyCode::KeyS) {
+            for children in q_ship_children.iter_mut() {
+                for child in children {
+                    if let Ok(ent_id) = q_particle_system.get_mut(*child) {
+                        commands.entity(ent_id).insert(Playing);
+                    }
+                }
             }
-            _ => {}
+        }
+        if keyboard_input.just_released(KeyCode::KeyS) {
+            for children in q_ship_children.iter_mut() {
+                for child in children {
+                    if let Ok(ent_id) = q_particle_system.get_mut(*child) {
+                        commands.entity(ent_id).remove::<Playing>();
+                    }
+                }
+            }
         }
     }
 }
@@ -138,14 +149,13 @@ pub fn apply_forces_ship(
     }
 }
 
-// * when complexity of game rises, limit this to EMIT EVENTS
-// - OPTION A: emit phenomenological / qualitative / "object" events like: Death, Hurt, Impact, Score, Level up. Each receiving system does everything: sound, particles, graphics, UI, damage, spawn, destroy
-// - OPTION B: emit quantitative / discrete events like: damage, sound, particle, animate, UI, spawn, destroy. Each handled by a separate system.
-pub fn post_collision_sounds(
+// TODO
+// - SOLUTION: fixedupdate will emit effect events, data flows to Update systems, which handles perceivable effects
+//   - thus is more like option A
+pub fn emit_collision_effects_fixme(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
-    collision_sound: Res<ProjectileImpactSound>,
-    damage_ship_sound: Res<ShipDamagedSound>,
+    // collision_sound: Res<ProjectileImpactSound>,
     destroy_ship_sound: Res<ShipDestroyedSound>,
     destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
     asteroid_clash_sound: Res<AsteroidClashSound>,
@@ -181,26 +191,26 @@ pub fn post_collision_sounds(
                 let proj_a_result = q_proj.get(*ent_a);
                 let proj_b_result = q_proj.get(*ent_b);
 
-                if proj_a_result.is_ok() {
-                    commands.entity(*ent_a).insert(DespawnDelay(Timer::new(
-                        Duration::from_secs_f32(2.0),
-                        TimerMode::Once,
-                    )));
-                }
+                // if proj_a_result.is_ok() {
+                //     commands.entity(*ent_a).insert(DespawnDelay(Timer::new(
+                //         Duration::from_secs_f32(2.0),
+                //         TimerMode::Once,
+                //     )));
+                // }
 
-                if proj_b_result.is_ok() {
-                    commands.entity(*ent_b).insert(DespawnDelay(Timer::new(
-                        Duration::from_secs_f32(1.0),
-                        TimerMode::Once,
-                    )));
-                }
+                // if proj_b_result.is_ok() {
+                //     commands.entity(*ent_b).insert(DespawnDelay(Timer::new(
+                //         Duration::from_secs_f32(1.0),
+                //         TimerMode::Once,
+                //     )));
+                // }
 
-                if [proj_a_result, proj_b_result].iter().any(|x| x.is_ok()) {
-                    commands.spawn(AudioBundle {
-                        source: collision_sound.0.clone(),
-                        settings: PlaybackSettings::DESPAWN,
-                    });
-                }
+                // if [proj_a_result, proj_b_result].iter().any(|x| x.is_ok()) {
+                //     commands.spawn(AudioBundle {
+                //         source: collision_sound.0.clone(),
+                //         settings: PlaybackSettings::DESPAWN,
+                //     });
+                // }
 
                 // proj-aster
                 {
@@ -273,16 +283,7 @@ pub fn post_collision_sounds(
                                         source: destroy_ship_sound.0.clone(),
                                         settings: PlaybackSettings::DESPAWN,
                                     });
-                                    commands.spawn(AudioBundle {
-                                        source: damage_ship_sound.0.clone(),
-                                        settings: PlaybackSettings::DESPAWN,
-                                    });
                                     commands.entity(ship_id).despawn_recursive();
-                                } else {
-                                    commands.spawn(AudioBundle {
-                                        source: damage_ship_sound.0.clone(),
-                                        settings: PlaybackSettings::DESPAWN,
-                                    });
                                 }
                             }
                         }
@@ -321,10 +322,6 @@ pub fn post_collision_sounds(
                             } else {
                                 if let Ok(proj_dmg) = q_proj.get(proj_id) {
                                     ship_health.0 -= proj_dmg.0;
-                                    commands.spawn(AudioBundle {
-                                        source: damage_ship_sound.0.clone(),
-                                        settings: PlaybackSettings::DESPAWN,
-                                    });
                                 }
                             }
                         }

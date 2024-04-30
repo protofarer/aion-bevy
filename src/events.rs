@@ -1,11 +1,12 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 use bevy::prelude::*;
 use bevy_particle_systems::*;
 use bevy_rapier2d::{dynamics::Velocity, pipeline::CollisionEvent};
 
 use crate::{
-    components::{AsteroidTag, CollisionRadius, PlayerShipTag, ProjectileTag},
+    audio::{ProjectileImpactSound, ShipDamagedSound},
+    components::{AsteroidTag, CollisionRadius, DespawnDelay, PlayerShipTag, ProjectileTag},
     game::ParticlePixelTexture,
 };
 
@@ -24,11 +25,24 @@ pub struct CollisionPlayerShipEvent;
 #[derive(Event)]
 pub struct CollisionProjectileAsteroidEvent;
 
-pub fn collide_projectile(
+pub enum Avatars {
+    PlayerShip,
+    Asteroid,
+    Projectile,
+}
+
+#[derive(Event)]
+pub struct EffectsDestroyEvent {
+    pub translation: Vec2,
+    pub avatar: Avatars,
+}
+
+pub fn effects_projectile_collision(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     q_proj: Query<(&Transform, &Velocity), (With<ProjectileTag>,)>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
+    proj_coll_sound: Res<ProjectileImpactSound>,
 ) {
     for event in evr_collisions.read() {
         match event {
@@ -40,6 +54,14 @@ pub fn collide_projectile(
                         transform,
                         velocity,
                     );
+                    commands.entity(*ent_a).insert(DespawnDelay(Timer::new(
+                        Duration::from_secs_f32(2.0),
+                        TimerMode::Once,
+                    )));
+                    commands.spawn(AudioBundle {
+                        source: proj_coll_sound.0.clone(),
+                        settings: PlaybackSettings::DESPAWN,
+                    });
                 }
                 if let Ok((transform, velocity)) = q_proj.get(*ent_b) {
                     emit_projectile_collision_particles(
@@ -48,6 +70,14 @@ pub fn collide_projectile(
                         transform,
                         velocity,
                     );
+                    commands.entity(*ent_b).insert(DespawnDelay(Timer::new(
+                        Duration::from_secs_f32(2.0),
+                        TimerMode::Once,
+                    )));
+                    commands.spawn(AudioBundle {
+                        source: proj_coll_sound.0.clone(),
+                        settings: PlaybackSettings::DESPAWN,
+                    });
                 }
             }
             _ => {}
@@ -55,7 +85,7 @@ pub fn collide_projectile(
     }
 }
 
-pub fn collide_asteroid_w_asteroid(
+pub fn update_collide_asteroid_w_asteroid(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     q_proj: Query<(&Transform, &Velocity), (With<ProjectileTag>,)>,
@@ -92,11 +122,12 @@ pub fn collide_asteroid_w_asteroid(
     }
 }
 
-pub fn collide_ship(
+pub fn update_collide_ship(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     q_ship: Query<&Transform, With<PlayerShipTag>>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
+    damage_ship_sound: Res<ShipDamagedSound>,
 ) {
     for event in evr_collisions.read() {
         match event {
@@ -107,6 +138,10 @@ pub fn collide_ship(
                         &transform,
                         &particle_pixel_texture,
                     );
+                    commands.spawn(AudioBundle {
+                        source: damage_ship_sound.0.clone(),
+                        settings: PlaybackSettings::DESPAWN,
+                    });
                 }
 
                 if let Ok((transform)) = q_ship.get(*ent_b) {
@@ -115,6 +150,10 @@ pub fn collide_ship(
                         &transform,
                         &particle_pixel_texture,
                     );
+                    commands.spawn(AudioBundle {
+                        source: damage_ship_sound.0.clone(),
+                        settings: PlaybackSettings::DESPAWN,
+                    });
                 }
             }
             _ => {}
@@ -275,4 +314,22 @@ fn emit_ship_collision_particles(
             ..ParticleSystemBundle::default()
         })
         .insert(Playing);
+}
+
+pub fn handle_destruction_events(
+    mut commands: Commands,
+    mut ev_w: EventReader<EffectsDestroyEvent>,
+) {
+    for event in ev_w.read() {
+        match event.avatar {
+            Avatars::PlayerShip => {
+                // death sound
+                // death particles
+
+
+            }
+            Avatars::Asteroid => {}
+            _ => {}
+        }
+    }
 }
