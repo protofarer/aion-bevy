@@ -24,7 +24,7 @@ use crate::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
     },
-    events::{collide_asteroid_w_asteroid, CollisionAsteroidAsteroidEvent},
+    events::{collide_asteroid_w_asteroid, collide_projectile, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupBasicTexture, PowerupComplexTexture,
@@ -62,6 +62,7 @@ pub fn play_plugin(app: &mut App) {
                     handle_collision_events,
                     emit_thruster_particles,
                     collide_asteroid_w_asteroid,
+                    collide_projectile,
                     post_collision_sounds,
                 )
                     .run_if(in_state(GameState::Play)),
@@ -71,7 +72,8 @@ pub fn play_plugin(app: &mut App) {
             ),
         )
         .add_systems(OnExit(GameState::Play), despawn_screen::<OnPlayScreen>)
-        .add_event::<CollisionAsteroidAsteroidEvent>();
+        .add_event::<CollisionAsteroidAsteroidEvent>()
+        .add_event::<CollisionProjectileEvent>();
 }
 
 pub fn setup_play(

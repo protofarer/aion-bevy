@@ -17,7 +17,7 @@ use crate::{
         AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
         Score,
     },
-    events::CollisionAsteroidAsteroidEvent,
+    events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::ThrustParticleTexture,
     utils::Heading,
 };
@@ -52,6 +52,7 @@ pub fn handle_collision_events(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     mut ev_aster_aster: EventWriter<CollisionAsteroidAsteroidEvent>,
+    mut ev_proj: EventWriter<CollisionProjectileEvent>,
     // mut contact_force_events: EventReader<ContactForceEvent>,
     q_aster: Query<
         (&Transform, &CollisionRadius),
@@ -62,7 +63,7 @@ pub fn handle_collision_events(
         ),
     >,
     q_proj: Query<
-        (&Transform, &Velocity),
+        (),
         (
             With<ProjectileTag>,
             Without<AsteroidTag>,
@@ -94,94 +95,18 @@ pub fn handle_collision_events(
                 }
 
                 // PROJECTILE CLINKS
-
-                if let Ok((transform, velocity)) = q_proj.get(*ent_a) {
-                    // f(commands, transf, vel) {}
-                    let direction_angle = Vec2::from_angle(PI).rotate(velocity.linvel).to_angle();
-
-                    // TODO gen_projectile_impact_particle_bundle(texture, translation, )
-                    commands
-                        .spawn(ParticleSystemBundle {
-                            particle_system: ParticleSystem {
-                                max_particles: 6,
-                                texture: thrust_particle_texture.0.clone().into(),
-                                spawn_rate_per_second: 0.0.into(),
-                                // TODO scale with proj velocity
-                                initial_speed: JitteredValue::jittered(30.0, -10.0..0.0),
-                                lifetime: JitteredValue::jittered(0.5, -0.25..0.0),
-                                // color: ColorOverTime::Constant((Color::WHITE)),
-                                color: ColorOverTime::Gradient(Curve::new(vec![
-                                    CurvePoint::new(Color::WHITE, 0.0),
-                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
-                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
-                                ])),
-                                emitter_shape: CircleSegment {
-                                    radius: 0.0.into(),
-                                    opening_angle: std::f32::consts::PI / 2.0,
-                                    direction_angle,
-                                }
-                                .into(),
-                                looping: false,
-                                rotate_to_movement_direction: true,
-                                initial_rotation: (0_f32).to_radians().into(),
-                                system_duration_seconds: 0.25,
-                                max_distance: Some(100.0),
-                                scale: 1.0.into(),
-                                bursts: vec![ParticleBurst::new(0.0, 6)],
-                                ..ParticleSystem::default()
-                            },
-                            transform: Transform::from_xyz(
-                                transform.translation.x,
-                                transform.translation.y,
-                                0.0,
-                            ),
-                            ..ParticleSystemBundle::default()
-                        })
-                        .insert(Playing);
+                if q_proj.get(*ent_a).is_ok() {
+                    ev_proj.send(CollisionProjectileEvent {
+                        projectile_ent: *ent_a,
+                        other_ent: *ent_b,
+                    });
                 }
 
-                if let Ok((transform, velocity)) = q_proj.get(*ent_b) {
-                    // f(commands, transf, vel) {}
-                    let direction_angle = Vec2::from_angle(PI).rotate(velocity.linvel).to_angle();
-
-                    commands
-                        .spawn(ParticleSystemBundle {
-                            particle_system: ParticleSystem {
-                                max_particles: 6,
-                                texture: thrust_particle_texture.0.clone().into(),
-                                spawn_rate_per_second: 0.0.into(),
-                                // TODO scale with proj velocity
-                                initial_speed: JitteredValue::jittered(30.0, -10.0..0.0),
-                                lifetime: JitteredValue::jittered(0.5, -0.25..0.0),
-                                // color: ColorOverTime::Constant((Color::WHITE)),
-                                color: ColorOverTime::Gradient(Curve::new(vec![
-                                    CurvePoint::new(Color::WHITE, 0.0),
-                                    CurvePoint::new(Color::rgba(1., 1., 1., 0.5), 0.2),
-                                    CurvePoint::new(Color::rgba(1.0, 1.0, 1.0, 0.1), 1.0),
-                                ])),
-                                emitter_shape: CircleSegment {
-                                    radius: 0.0.into(),
-                                    opening_angle: std::f32::consts::PI / 2.0,
-                                    direction_angle,
-                                }
-                                .into(),
-                                looping: false,
-                                rotate_to_movement_direction: true,
-                                initial_rotation: (0_f32).to_radians().into(),
-                                system_duration_seconds: 0.25,
-                                max_distance: Some(100.0),
-                                scale: 1.0.into(),
-                                bursts: vec![ParticleBurst::new(0.0, 6)],
-                                ..ParticleSystem::default()
-                            },
-                            transform: Transform::from_xyz(
-                                transform.translation.x,
-                                transform.translation.y,
-                                0.0,
-                            ),
-                            ..ParticleSystemBundle::default()
-                        })
-                        .insert(Playing);
+                if q_proj.get(*ent_b).is_ok() {
+                    ev_proj.send(CollisionProjectileEvent {
+                        projectile_ent: *ent_b,
+                        other_ent: *ent_a,
+                    });
                 }
 
                 if let Ok((transform)) = q_ship.get(*ent_a) {
