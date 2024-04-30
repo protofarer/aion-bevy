@@ -14,6 +14,7 @@ mod game;
 mod physics;
 mod play;
 mod utils;
+mod events;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0., 0., 0.);
 

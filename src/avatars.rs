@@ -200,7 +200,7 @@ impl ThrusterBundle {
                     scale: 1.0.into(),
                     ..ParticleSystem::default()
                 },
-                // transform: Transform::from_xyz(x + 30., y, 0.0),
+                transform: Transform::from_xyz(20., 0., 0.0),
                 ..ParticleSystemBundle::default()
             },
         }

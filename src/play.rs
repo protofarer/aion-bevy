@@ -7,7 +7,7 @@ use bevy_particle_systems::{
 };
 use bevy_rapier2d::{
     dynamics::Velocity,
-    geometry::{ActiveEvents, Collider},
+    geometry::{ActiveEvents, Collider, Sensor},
     parry::shape::SharedShape,
 };
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
@@ -24,6 +24,7 @@ use crate::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
     },
+    events::{collide_asteroid_w_asteroid, CollisionAsteroidAsteroidEvent},
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupBasicTexture, PowerupComplexTexture,
@@ -32,7 +33,8 @@ use crate::{
         RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::{
-        apply_forces_ship, emit_collision_particles, emit_thruster_particles, resolve_collisions,
+        apply_forces_ship, emit_post_collision_events, emit_thruster_particles,
+        post_collision_sounds,
     },
     utils::Heading,
 };
@@ -47,9 +49,9 @@ pub fn play_plugin(app: &mut App) {
                 ship_fire,
                 despawn_delay,
                 apply_forces_ship,
-                resolve_collisions, // check_for_collisions,
-                                    // play_collision_sound,
-                                    // process_score,
+                emit_post_collision_events,
+                collide_asteroid_w_asteroid,
+                post_collision_sounds,
             )
                 .chain()
                 .run_if(in_state(GameState::Play)),
@@ -62,7 +64,6 @@ pub fn play_plugin(app: &mut App) {
                     draw_line,
                     update_scoreboard,
                     emit_thruster_particles,
-                    emit_collision_particles,
                 )
                     .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)
@@ -70,7 +71,8 @@ pub fn play_plugin(app: &mut App) {
                     .run_if(press_r_restart_play),
             ),
         )
-        .add_systems(OnExit(GameState::Play), despawn_screen::<OnPlayScreen>);
+        .add_systems(OnExit(GameState::Play), despawn_screen::<OnPlayScreen>)
+        .add_event::<CollisionAsteroidAsteroidEvent>();
 }
 
 pub fn setup_play(
@@ -95,7 +97,7 @@ pub fn setup_play(
         playership_mesh_handle.0.clone(),
         playership_material_handle.0.clone(),
         0.,
-        0.,
+        -150.,
         None,
         thrust_particle_texture.0.clone().into(),
     );
@@ -122,48 +124,48 @@ pub fn setup_play(
     commands.spawn(ast1).insert(OnPlayScreen);
 
     // clashing asteroids
-    let start_x = LEFT_WALL + 50.;
-    let dx = 250.;
-    let y = TOP_WALL - 50.;
-    let separation_y = 150.;
-    let pairs = [
-        (AsteroidSizes::Small, AsteroidSizes::Small),
-        (AsteroidSizes::Small, AsteroidSizes::Medium),
-        (AsteroidSizes::Small, AsteroidSizes::Large),
-        (AsteroidSizes::Medium, AsteroidSizes::Medium),
-        (AsteroidSizes::Medium, AsteroidSizes::Large),
-        (AsteroidSizes::Large, AsteroidSizes::Large),
-    ];
-    for (i, (size_a, size_b)) in pairs.iter().enumerate() {
-        commands
-            .spawn(gen_asteroid(
-                *size_a,
-                5,
-                asteroid_mesh_handles.0.clone(),
-                asteroid_material_handles.0.clone(),
-                start_x + (dx * i as f32),
-                y,
-                Velocity {
-                    linvel: Heading(-90.).linvel(20.),
-                    angvel: 0.,
-                },
-            ))
-            .insert(OnPlayScreen);
-        commands
-            .spawn(gen_asteroid(
-                *size_b,
-                5,
-                asteroid_mesh_handles.0.clone(),
-                asteroid_material_handles.0.clone(),
-                start_x + (dx * i as f32),
-                y - separation_y,
-                Velocity {
-                    linvel: Heading(90.).linvel(20.),
-                    angvel: 0.,
-                },
-            ))
-            .insert(OnPlayScreen);
-    }
+    // let start_x = LEFT_WALL + 50.;
+    // let dx = 250.;
+    // let y = TOP_WALL - 50.;
+    // let separation_y = 150.;
+    // let pairs = [
+    //     (AsteroidSizes::Small, AsteroidSizes::Small),
+    //     (AsteroidSizes::Small, AsteroidSizes::Medium),
+    //     (AsteroidSizes::Small, AsteroidSizes::Large),
+    //     (AsteroidSizes::Medium, AsteroidSizes::Medium),
+    //     (AsteroidSizes::Medium, AsteroidSizes::Large),
+    //     (AsteroidSizes::Large, AsteroidSizes::Large),
+    // ];
+    // for (i, (size_a, size_b)) in pairs.iter().enumerate() {
+    //     commands
+    //         .spawn(gen_asteroid(
+    //             *size_a,
+    //             5,
+    //             asteroid_mesh_handles.0.clone(),
+    //             asteroid_material_handles.0.clone(),
+    //             start_x + (dx * i as f32),
+    //             y,
+    //             Velocity {
+    //                 linvel: Heading(-90.).linvel(20.),
+    //                 angvel: 0.,
+    //             },
+    //         ))
+    //         .insert(OnPlayScreen);
+    //     commands
+    //         .spawn(gen_asteroid(
+    //             *size_b,
+    //             5,
+    //             asteroid_mesh_handles.0.clone(),
+    //             asteroid_material_handles.0.clone(),
+    //             start_x + (dx * i as f32),
+    //             y - separation_y,
+    //             Velocity {
+    //                 linvel: Heading(90.).linvel(20.),
+    //                 angvel: 0.,
+    //             },
+    //         ))
+    //         .insert(OnPlayScreen);
+    // }
 
     // Diagonal collision, see collision particles
     commands
@@ -311,6 +313,7 @@ pub fn setup_play(
             ..default()
         },
         Collider::from(SharedShape::ball(20.)),
+        Sensor,
         PickupTag,
         ActiveEvents::COLLISION_EVENTS,
     ));
@@ -326,7 +329,8 @@ pub fn setup_play(
             transform: Transform::from_xyz(-250., 0., 0.).with_scale(Vec3::splat(0.70)),
             ..default()
         },
-        Collider::from(SharedShape::ball(10.)),
+        Collider::from(SharedShape::ball(15.)),
+        Sensor,
         PickupTag,
         ActiveEvents::COLLISION_EVENTS,
     ));
@@ -342,7 +346,8 @@ pub fn setup_play(
             transform: Transform::from_xyz(-300., 0., 0.).with_scale(Vec3::splat(0.40)),
             ..default()
         },
-        Collider::from(SharedShape::ball(10.)),
+        Collider::from(SharedShape::ball(8.)),
+        Sensor,
         PickupTag,
         ActiveEvents::COLLISION_EVENTS,
     ));
