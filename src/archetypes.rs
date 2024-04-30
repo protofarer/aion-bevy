@@ -88,7 +88,7 @@ impl<M: Material2d> Ship<M> {
             (
                 ProjectileEmitterBundle::new(
                     22.,
-                    heading.unwrap_or_default(),
+                    heading,
                     Some(FireType::Primary),
                 ),
                 Thrust::default(),

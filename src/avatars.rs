@@ -13,17 +13,16 @@ use crate::{
         FireType, Health, PlayerShipTag, PrimaryThrustMagnitude, ProjectileEmission, TurnRate,
     },
     game::{
-        AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-        DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH, INIT_SHIP_RESTITUTION,
-        INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R, MEDIUM_ASTEROID_HEALTH,
-        MEDIUM_ASTEROID_R, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
+        ParticlePixelTexture, PlayerShipTexture, AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+        AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH,
+        INIT_SHIP_RESTITUTION, INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R,
+        MEDIUM_ASTEROID_HEALTH, MEDIUM_ASTEROID_R, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
     },
     utils::Heading,
 };
-
 #[derive(Bundle)]
 pub struct PlayerShip {
-    mesh_bundle: MaterialMesh2dBundle<ColorMaterial>,
+    sprite_bundle: SpriteBundle,
     turn_rate: TurnRate,
     collider: Collider,
     collision_events: ActiveEvents,
@@ -39,21 +38,23 @@ pub struct PlayerShip {
 }
 
 pub fn gen_playership(
-    mesh_handle: Handle<Mesh>,
-    material_handle: Handle<ColorMaterial>,
+    texture: &PlayerShipTexture,
     x: f32,
     y: f32,
     heading: Option<Heading>,
-    thruster_particle_texture: Handle<Image>,
+    particle_pixel_texture: &ParticlePixelTexture,
 ) -> (PlayerShip, (ProjectileEmitterBundle, ThrusterBundle)) {
     (
         PlayerShip {
-            mesh_bundle: MaterialMesh2dBundle {
-                mesh: mesh_handle.into(),
-                material: material_handle.into(),
+            sprite_bundle: SpriteBundle {
+                sprite: Sprite {
+                    color: Color::rgba(0., 1., 0., 1.),
+                    ..default()
+                },
+                texture: texture.0.clone().into(),
                 transform: Transform {
                     translation: Vec3::new(x, y, 1.),
-                    rotation: heading.unwrap_or_default().into(),
+                    // rotation: heading.unwrap_or_default().into(),
                     ..default()
                 },
                 ..default()
@@ -88,12 +89,12 @@ pub fn gen_playership(
             tag: PlayerShipTag,
         },
         (
-            ProjectileEmitterBundle::new(22., heading.unwrap_or_default(), Some(FireType::Primary)),
+            ProjectileEmitterBundle::new(22., heading, Some(FireType::Primary)),
             ThrusterBundle::new(
                 0.,
                 0.,
                 DEFAULT_THRUST_FORCE_MAGNITUDE,
-                thruster_particle_texture.into(),
+                particle_pixel_texture.0.clone().into(),
             ),
         ),
     )
@@ -108,8 +109,8 @@ pub struct ProjectileEmitterBundle {
 }
 
 impl ProjectileEmitterBundle {
-    pub fn new(r: f32, heading: Heading, fire_type: Option<FireType>) -> Self {
-        let vec2 = Vec2::new(heading.0.cos(), heading.0.sin());
+    pub fn new(r: f32, heading: Option<Heading>, fire_type: Option<FireType>) -> Self {
+        let heading = heading.unwrap_or_default();
         let fire_type = match fire_type {
             Some(x) => x,
             None => FireType::Primary,
@@ -119,7 +120,8 @@ impl ProjectileEmitterBundle {
             emitter: ProjectileEmission::default(),
             transform: TransformBundle {
                 local: Transform {
-                    translation: Vec3::new(vec2.x, vec2.y, 0.) * 1.05 * r,
+                    translation: Vec3::new(heading.0.cos(), heading.0.sin(), 0.) * 1.05 * r,
+                    rotation: heading.into(),
                     ..default()
                 },
                 ..default()
@@ -260,5 +262,87 @@ pub fn gen_asteroid(
         Some(velocity),
         Some(health),
         None,
+    )
+}
+
+// can be used for any avatar that has a mesh and material
+#[derive(Bundle)]
+pub struct PlayerShipMaterialMesh {
+    mesh_bundle: MaterialMesh2dBundle<ColorMaterial>,
+    turn_rate: TurnRate,
+    collider: Collider,
+    collision_events: ActiveEvents,
+    health: Health,
+    rigidbody: RigidBody,
+    velocity: Velocity,
+    primary_thrust_force: ExternalForce,
+    primary_thrust_magnitude: PrimaryThrustMagnitude,
+    restitution: Restitution,
+    gravity: GravityScale,
+    damping: Damping,
+    tag: PlayerShipTag,
+}
+
+pub fn gen_playership_from_materialmesh(
+    mesh_handle: Handle<Mesh>,
+    material_handle: Handle<ColorMaterial>,
+    x: f32,
+    y: f32,
+    heading: Option<Heading>,
+    thruster_particle_texture: Handle<Image>,
+) -> (
+    PlayerShipMaterialMesh,
+    (ProjectileEmitterBundle, ThrusterBundle),
+) {
+    (
+        PlayerShipMaterialMesh {
+            mesh_bundle: MaterialMesh2dBundle {
+                mesh: mesh_handle.into(),
+                material: material_handle.into(),
+                transform: Transform {
+                    translation: Vec3::new(x, y, 1.),
+                    rotation: heading.unwrap_or_default().into(),
+                    ..default()
+                },
+                ..default()
+            },
+            collider: Collider::triangle(
+                Vec2::new(-15., -15.),
+                Vec2::X * 22.,
+                Vec2::new(-15., 15.),
+            ),
+            collision_events: ActiveEvents::COLLISION_EVENTS,
+            health: Health(INIT_SHIP_HEALTH),
+            turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
+            rigidbody: RigidBody::Dynamic,
+            velocity: Velocity {
+                linvel: Vec2::ZERO,
+                angvel: 0.,
+            },
+            primary_thrust_force: ExternalForce {
+                force: Vec2::ZERO,
+                torque: 0.,
+            },
+            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
+            restitution: Restitution {
+                coefficient: INIT_SHIP_RESTITUTION,
+                combine_rule: CoefficientCombineRule::Multiply, // extra bouncy for player's sake to not get quickly dribbled to death
+            },
+            gravity: GravityScale(0.),
+            damping: Damping {
+                linear_damping: AMBIENT_LINEAR_FRICTION_COEFFICIENT,
+                angular_damping: AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+            },
+            tag: PlayerShipTag,
+        },
+        (
+            ProjectileEmitterBundle::new(22., heading, Some(FireType::Primary)),
+            ThrusterBundle::new(
+                0.,
+                0.,
+                DEFAULT_THRUST_FORCE_MAGNITUDE,
+                thruster_particle_texture.into(),
+            ),
+        ),
     )
 }

@@ -14,7 +14,7 @@ use crate::audio::{
     AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
     ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
 };
-use crate::avatars::{gen_asteroid, gen_playership};
+use crate::avatars::{gen_asteroid, gen_playership_from_materialmesh};
 use crate::components::{Score, ScoreboardUi};
 use crate::physics::{
     apply_forces_ship, emit_thruster_particles, handle_collision_events, post_collision_sounds,
@@ -181,6 +181,9 @@ pub fn load_assets(
     commands.insert_resource(StarSimpleTexture(star_simple_texture));
     let star_complex_texture = asset_server.load("star_08.png").into();
     commands.insert_resource(StarComplexTexture(star_complex_texture));
+
+    let playership_texture = asset_server.load("ship_K.png").into();
+    commands.insert_resource(PlayerShipTexture(playership_texture));
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -239,6 +242,9 @@ pub struct StarSimpleTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct StarComplexTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct PlayerShipTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct Textures {

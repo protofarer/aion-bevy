@@ -19,7 +19,7 @@ use noise::{
 use crate::{
     archetypes::{AsteroidSizes, ProjectileBundle},
     audio::ProjectileEmitSound,
-    avatars::{gen_asteroid, gen_playership},
+    avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh},
     components::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
@@ -30,7 +30,7 @@ use crate::{
     },
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        ParticlePixelTexture, PlayerShipMaterialHandle, PlayerShipMeshHandle,
+        ParticlePixelTexture, PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture,
         PowerupComplexTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
         StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
         SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
@@ -89,6 +89,7 @@ pub fn setup_play(
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_mesh_handle: Res<PlayerShipMeshHandle>,
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
+    playership_texture: Res<PlayerShipTexture>,
     white_material_handle: Res<WhiteMaterialHandle>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
     powerup_essential_texture: Res<PowerupSimpleTexture>,
@@ -102,8 +103,7 @@ pub fn setup_play(
         0.,
         -150.,
         &mut commands,
-        &playership_mesh_handle,
-        &playership_material_handle,
+        &playership_texture,
         None,
         &particle_pixel_texture,
     );
@@ -573,19 +573,11 @@ fn spawn_playership(
     x: f32,
     y: f32,
     commands: &mut Commands,
-    playership_mesh_handle: &PlayerShipMeshHandle,
-    playership_material_handle: &PlayerShipMaterialHandle,
+    playership_texture: &PlayerShipTexture,
     heading: Option<Heading>,
     particle_pixel_texture: &ParticlePixelTexture,
 ) {
-    let (ship, children) = gen_playership(
-        playership_mesh_handle.0.clone(),
-        playership_material_handle.0.clone(),
-        x,
-        y,
-        None,
-        particle_pixel_texture.0.clone().into(),
-    );
+    let (ship, children) = gen_playership(playership_texture, x, y, None, particle_pixel_texture);
     commands
         .spawn(ship)
         .with_children(|parent| {
