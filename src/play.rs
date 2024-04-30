@@ -33,8 +33,7 @@ use crate::{
         RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::{
-        apply_forces_ship, emit_post_collision_events, emit_thruster_particles,
-        post_collision_sounds,
+        apply_forces_ship, emit_thruster_particles, handle_collision_events, post_collision_sounds,
     },
     utils::Heading,
 };
@@ -49,9 +48,6 @@ pub fn play_plugin(app: &mut App) {
                 ship_fire,
                 despawn_delay,
                 apply_forces_ship,
-                emit_post_collision_events,
-                collide_asteroid_w_asteroid,
-                post_collision_sounds,
             )
                 .chain()
                 .run_if(in_state(GameState::Play)),
@@ -63,7 +59,10 @@ pub fn play_plugin(app: &mut App) {
                     draw_boundary,
                     draw_line,
                     update_scoreboard,
+                    handle_collision_events,
                     emit_thruster_particles,
+                    collide_asteroid_w_asteroid,
+                    post_collision_sounds,
                 )
                     .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)

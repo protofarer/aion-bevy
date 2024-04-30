@@ -11,10 +11,15 @@ use crate::{
     audio::{
         AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
         ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
-    }, avatars::Thrust, components::{
+    },
+    avatars::Thrust,
+    components::{
         AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
         Score,
-    }, events::CollisionAsteroidAsteroidEvent, game::ThrustParticleTexture, utils::Heading
+    },
+    events::CollisionAsteroidAsteroidEvent,
+    game::ThrustParticleTexture,
+    utils::Heading,
 };
 
 pub fn emit_thruster_particles(
@@ -43,7 +48,7 @@ pub fn emit_thruster_particles(
     }
 }
 
-pub fn emit_post_collision_events(
+pub fn handle_collision_events(
     mut commands: Commands,
     mut collision_events: EventReader<CollisionEvent>,
     mut ev_aster_aster: EventWriter<CollisionAsteroidAsteroidEvent>,
