@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::math::{EulerRot, Quat, Vec2, Vec3};
 
 use crate::game::{Speed, DEFAULT_HEADING};
@@ -21,6 +23,12 @@ impl Heading {
     pub fn linvel(&self, speed: Speed) -> Vec2 {
         self.to_vec2() * speed
     }
+    pub fn to_degrees(&self) -> f32 {
+        self.0
+    }
+    pub fn to_radians(&self) -> f32 {
+        self.0.to_radians()
+    }
     pub fn from_radians(radians: f32) -> Self {
         Heading(radians.to_degrees())
     }
@@ -40,7 +48,7 @@ impl Default for Heading {
 
 impl Into<Quat> for Heading {
     fn into(self) -> Quat {
-        let angle_radians = self.0.to_radians();
+        let angle_radians = self.0.to_radians() - PI / 2.0;
         Quat::from_rotation_z(angle_radians)
     }
 }
@@ -48,6 +56,6 @@ impl Into<Quat> for Heading {
 impl From<Quat> for Heading {
     fn from(quat: Quat) -> Self {
         let (z_rot, _x_rot, _y_rot) = quat.to_euler(EulerRot::ZXY);
-        Heading(z_rot.to_degrees())
+        Heading(z_rot.to_degrees() + 90.)
     }
 }

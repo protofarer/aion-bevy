@@ -44,8 +44,8 @@ pub const DEFAULT_MOVESPEED: Speed = 100.;
 pub const DEFAULT_HEALTH: i32 = 1;
 pub const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 100;
 lazy_static! {
-    pub static ref DEFAULT_HEADING: Heading = Heading(0.);
-    pub static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(0.);
+    pub static ref DEFAULT_HEADING: Heading = Heading(90.);
+    pub static ref DEFAULT_ROTATION: Quat = Quat::from_rotation_z(90.);
 }
 pub const DEFAULT_TURNRATE: f32 = 10.;
 pub const DEFAULT_DAMAGE: i32 = 1;

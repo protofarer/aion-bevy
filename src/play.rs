@@ -68,6 +68,7 @@ pub fn play_plugin(app: &mut App) {
                     collide_projectile,
                     collide_ship,
                     post_collision_sounds,
+                    print_ship_heading
                 )
                     .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)
@@ -585,4 +586,11 @@ fn spawn_playership(
             parent.spawn(children.1);
         })
         .insert(OnPlayScreen);
+}
+
+fn print_ship_heading(mut query: Query<&Transform, With<PlayerShipTag>>) {
+    for transform in query.iter() {
+        let heading = Heading::from(transform.rotation);
+        println!("Ship heading: {:?}", heading);
+    }
 }

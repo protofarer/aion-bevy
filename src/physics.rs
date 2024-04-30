@@ -26,7 +26,7 @@ pub fn emit_thruster_particles(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
-    mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>, Without<Playing>)>,
+    mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
 ) {
     if keyboard_input.pressed(KeyCode::KeyS) {
         for children in q_ship_children.iter_mut() {

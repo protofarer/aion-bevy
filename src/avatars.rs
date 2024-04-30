@@ -191,6 +191,7 @@ impl ThrusterBundle {
                     emitter_shape: CircleSegment {
                         radius: 30.0.into(),
                         opening_angle: std::f32::consts::PI / 12.,
+                        // direction_angle: Heading::default().to_radians() + PI,
                         direction_angle: PI,
                     }
                     .into(),
