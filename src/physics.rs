@@ -25,22 +25,22 @@ use crate::{
 pub fn emit_thruster_particles(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<&Children, With<PlayerShipTag>>,
-    mut q_particle_system_child: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
+    mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
+    mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>, Without<Playing>)>,
 ) {
     if keyboard_input.pressed(KeyCode::KeyS) {
-        for children in q_ship.iter_mut() {
+        for children in q_ship_children.iter_mut() {
             for child in children {
-                if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
+                if let Ok(ent_id) = q_particle_system.get_mut(*child) {
                     commands.entity(ent_id).insert(Playing);
                 }
             }
         }
     }
     if keyboard_input.just_released(KeyCode::KeyS) {
-        for children in q_ship.iter_mut() {
+        for children in q_ship_children.iter_mut() {
             for child in children {
-                if let Ok(ent_id) = q_particle_system_child.get_mut(*child) {
+                if let Ok(ent_id) = q_particle_system.get_mut(*child) {
                     commands.entity(ent_id).remove::<Playing>();
                 }
             }
@@ -88,89 +88,6 @@ pub fn handle_collision_events(
                 // do a fancy enum pattern match, where all queries are run
                 // against the ents, efficiently, and spit out the ent id along
                 // with a enum representing the avatar
-                let aster_a_result = q_aster.get(*ent_a);
-                let aster_b_result = q_aster.get(*ent_b);
-                if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
-                    ev_aster_aster.send(CollisionAsteroidAsteroidEvent(*ent_a, *ent_b));
-                }
-
-                // PROJECTILE CLINKS
-                if q_proj.get(*ent_a).is_ok() {
-                    ev_proj.send(CollisionProjectileEvent {
-                        projectile_ent: *ent_a,
-                        other_ent: *ent_b,
-                    });
-                }
-
-                if q_proj.get(*ent_b).is_ok() {
-                    ev_proj.send(CollisionProjectileEvent {
-                        projectile_ent: *ent_b,
-                        other_ent: *ent_a,
-                    });
-                }
-
-                if let Ok((transform)) = q_ship.get(*ent_a) {
-                    commands
-                        .spawn(ParticleSystemBundle {
-                            particle_system: ParticleSystem {
-                                max_particles: 25,
-                                texture: thrust_particle_texture.0.clone().into(),
-                                spawn_rate_per_second: 0.0.into(),
-                                initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
-                                lifetime: JitteredValue::jittered(3.0, -0.5..0.0),
-                                color: ColorOverTime::Gradient(Curve::new(vec![
-                                    CurvePoint::new(Color::RED, 0.0),
-                                    CurvePoint::new(Color::BLACK, 0.5),
-                                    CurvePoint::new(Color::BLACK, 1.0),
-                                ])),
-                                looping: false,
-                                system_duration_seconds: 1.0,
-                                max_distance: Some(500.0),
-                                scale: 3.0.into(),
-                                // scale: ValueOverTime::Lerp(Lerp::new(2.0, 20.)),
-                                bursts: vec![ParticleBurst::new(0.0, 25)],
-                                ..ParticleSystem::default()
-                            },
-                            transform: Transform::from_xyz(
-                                transform.translation.x,
-                                transform.translation.y,
-                                0.0,
-                            ),
-                            ..ParticleSystemBundle::default()
-                        })
-                        .insert(Playing);
-                }
-
-                if let Ok((transform)) = q_ship.get(*ent_b) {
-                    commands
-                        .spawn(ParticleSystemBundle {
-                            particle_system: ParticleSystem {
-                                max_particles: 25,
-                                texture: thrust_particle_texture.0.clone().into(),
-                                spawn_rate_per_second: 0.0.into(),
-                                initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
-                                lifetime: JitteredValue::jittered(3.0, -0.5..0.0),
-                                color: ColorOverTime::Gradient(Curve::new(vec![
-                                    CurvePoint::new(Color::RED, 0.0),
-                                    CurvePoint::new(Color::BLACK, 0.5),
-                                    CurvePoint::new(Color::BLACK, 1.0),
-                                ])),
-                                looping: false,
-                                system_duration_seconds: 1.0,
-                                max_distance: Some(500.0),
-                                scale: 3.0.into(),
-                                bursts: vec![ParticleBurst::new(0.0, 25)],
-                                ..ParticleSystem::default()
-                            },
-                            transform: Transform::from_xyz(
-                                transform.translation.x,
-                                transform.translation.y,
-                                0.0,
-                            ),
-                            ..ParticleSystemBundle::default()
-                        })
-                        .insert(Playing);
-                }
             }
             _ => {}
         }

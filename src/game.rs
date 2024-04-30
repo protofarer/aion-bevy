@@ -168,19 +168,17 @@ pub fn load_assets(
     let thruster_particle_texture = asset_server.load("px.png").into();
     commands.insert_resource(ThrustParticleTexture(thruster_particle_texture));
 
-    let powerup_simple_texture = asset_server.load("enemy_A.png").into();
+    let powerup_essential_texture = asset_server.load("enemy_A.png").into();
+    commands.insert_resource(PowerupSimpleTexture(powerup_essential_texture));
+    let powerup_simple_texture = asset_server.load("enemy_C.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
-
-    let powerup_basic_texture = asset_server.load("enemy_C.png").into();
-    commands.insert_resource(PowerupBasicTexture(powerup_basic_texture));
-
     let powerup_complex_texture = asset_server.load("enemy_E.png").into();
     commands.insert_resource(PowerupComplexTexture(powerup_complex_texture));
 
+    let star_essential_texture = asset_server.load("star_06.png").into();
+    commands.insert_resource(StarEssentialTexture(star_essential_texture));
     let star_simple_texture = asset_server.load("star_04.png").into();
     commands.insert_resource(StarSimpleTexture(star_simple_texture));
-    let star_basic_texture = asset_server.load("star_06.png").into();
-    commands.insert_resource(StarBasicTexture(star_basic_texture));
     let star_complex_texture = asset_server.load("star_08.png").into();
     commands.insert_resource(StarComplexTexture(star_complex_texture));
 }
@@ -225,22 +223,22 @@ pub struct WhiteMaterialHandle(pub Handle<ColorMaterial>);
 pub struct ThrustParticleTexture(pub Handle<Image>);
 
 #[derive(Resource)]
+pub struct PowerupEssentialTexture(pub Handle<Image>);
+
+#[derive(Resource)]
 pub struct PowerupSimpleTexture(pub Handle<Image>);
 
 #[derive(Resource)]
-pub struct PowerupBasicTexture(pub Handle<Image>);
+pub struct PowerupComplexTexture(pub Handle<Image>);
+
+#[derive(Resource)]
+pub struct StarEssentialTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct StarSimpleTexture(pub Handle<Image>);
 
 #[derive(Resource)]
-pub struct StarBasicTexture(pub Handle<Image>);
-
-#[derive(Resource)]
 pub struct StarComplexTexture(pub Handle<Image>);
-
-#[derive(Resource)]
-pub struct PowerupComplexTexture(pub Handle<Image>);
 
 #[derive(Resource)]
 pub struct Textures {

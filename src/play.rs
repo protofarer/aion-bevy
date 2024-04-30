@@ -24,11 +24,14 @@ use crate::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
     },
-    events::{collide_asteroid_w_asteroid, collide_projectile, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
+    events::{
+        collide_asteroid_w_asteroid, collide_projectile, collide_ship,
+        CollisionAsteroidAsteroidEvent, CollisionProjectileEvent,
+    },
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupBasicTexture, PowerupComplexTexture,
-        PowerupSimpleTexture, StarBasicTexture, StarComplexTexture, StarSimpleTexture,
+        PlayerShipMaterialHandle, PlayerShipMeshHandle, PowerupComplexTexture,
+        PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture, StarSimpleTexture,
         ThrustParticleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL,
         RIGHT_WALL, SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
@@ -63,6 +66,7 @@ pub fn play_plugin(app: &mut App) {
                     emit_thruster_particles,
                     collide_asteroid_w_asteroid,
                     collide_projectile,
+                    collide_ship,
                     post_collision_sounds,
                 )
                     .run_if(in_state(GameState::Play)),
@@ -87,28 +91,22 @@ pub fn setup_play(
     playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
     white_material_handle: Res<WhiteMaterialHandle>,
     thrust_particle_texture: Res<ThrustParticleTexture>,
+    powerup_essential_texture: Res<PowerupSimpleTexture>,
     powerup_simple_texture: Res<PowerupSimpleTexture>,
-    powerup_basic_texture: Res<PowerupBasicTexture>,
     powerup_complex_texture: Res<PowerupComplexTexture>,
+    star_essential_texture: Res<StarEssentialTexture>,
     star_simple_texture: Res<StarSimpleTexture>,
-    star_basic_texture: Res<StarBasicTexture>,
     star_complex_texture: Res<StarComplexTexture>,
 ) {
-    let (ship, children) = gen_playership(
-        playership_mesh_handle.0.clone(),
-        playership_material_handle.0.clone(),
+    spawn_playership(
         0.,
         -150.,
+        &mut commands,
+        &playership_mesh_handle,
+        &playership_material_handle,
         None,
-        thrust_particle_texture.0.clone().into(),
+        &thrust_particle_texture,
     );
-    commands
-        .spawn(ship)
-        .with_children(|parent| {
-            parent.spawn(children.0);
-            parent.spawn(children.1);
-        })
-        .insert(OnPlayScreen);
 
     let ast1 = gen_asteroid(
         AsteroidSizes::Medium,
@@ -303,83 +301,13 @@ pub fn setup_play(
     // }
 
     // Simple powerup, large and easy to get
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_simple_texture.0.clone(),
-            transform: Transform::from_xyz(-200., 0., 0.).with_scale(Vec3::splat(0.8)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(20.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
+    spawn_essential_powerup(-200., 0., &mut commands, &powerup_essential_texture);
+    spawn_simple_powerup(-250., 0., &mut commands, &powerup_simple_texture);
+    spawn_complex_powerup(-300., 0., &mut commands, &powerup_complex_texture);
 
-    // Basic powerup, moderate size and power
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_basic_texture.0.clone(),
-            transform: Transform::from_xyz(-250., 0., 0.).with_scale(Vec3::splat(0.70)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(15.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-
-    // Complex powerup, small and powerful
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_complex_texture.0.clone(),
-            transform: Transform::from_xyz(-300., 0., 0.).with_scale(Vec3::splat(0.40)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(8.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::WHITE,
-            ..default()
-        },
-        texture: star_simple_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -50., 0.).with_scale(Vec3::splat(0.15)),
-        ..default()
-    },));
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgba(1., 1., 1., 0.8),
-            ..default()
-        },
-        texture: star_basic_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -100., 0.).with_scale(Vec3::splat(0.15)),
-        ..default()
-    },));
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgba(1.0, 0.84, 0.0, 0.5),
-            ..default()
-        },
-        texture: star_complex_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -150., 0.).with_scale(Vec3::splat(0.15)),
-        ..default()
-    },));
+    spawn_essential_star(&mut commands, &star_essential_texture);
+    spawn_simple_star(&mut commands, &star_simple_texture);
+    spawn_complex_star(&mut commands, &star_complex_texture);
 }
 
 pub fn draw_line(mut painter: ShapePainter) {
@@ -532,4 +460,137 @@ pub fn despawn_delay(
 
 pub fn press_r_restart_play(keyboard_input: Res<ButtonInput<KeyCode>>) -> bool {
     keyboard_input.just_pressed(KeyCode::KeyR)
+}
+
+fn spawn_essential_star(commands: &mut Commands, star_simple_texture: &StarEssentialTexture) {
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::WHITE,
+            ..default()
+        },
+        texture: star_simple_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -50., 0.).with_scale(Vec3::splat(0.05)),
+        ..default()
+    },));
+}
+
+fn spawn_simple_star(commands: &mut Commands, star_basic_texture: &StarSimpleTexture) {
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            color: Color::rgba(1., 1., 1., 0.8),
+            ..default()
+        },
+        texture: star_basic_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -100., 0.).with_scale(Vec3::splat(0.10)),
+        ..default()
+    },));
+}
+
+fn spawn_complex_star(commands: &mut Commands, star_complex_texture: &StarComplexTexture) {
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            // GOLD
+            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
+            color: Color::rgba(1., 1., 1., 0.7),
+            ..default()
+        },
+        texture: star_complex_texture.0.clone(),
+        transform: Transform::from_xyz(-200., -150., 0.).with_scale(Vec3::splat(0.10)),
+        ..default()
+    },));
+}
+
+fn spawn_essential_powerup(
+    x: f32,
+    y: f32,
+    commands: &mut Commands,
+    powerup_essential_texture: &PowerupSimpleTexture,
+) {
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                ..default()
+            },
+            texture: powerup_essential_texture.0.clone(),
+            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(20.)),
+        Sensor,
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+}
+
+fn spawn_simple_powerup(
+    x: f32,
+    y: f32,
+    commands: &mut Commands,
+    powerup_simple_texture: &PowerupSimpleTexture,
+) {
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                ..default()
+            },
+            texture: powerup_simple_texture.0.clone(),
+            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(20.)),
+        Sensor,
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+}
+
+fn spawn_complex_powerup(
+    x: f32,
+    y: f32,
+    commands: &mut Commands,
+    powerup_complex_texture: &PowerupComplexTexture,
+) {
+    commands.spawn((
+        SpriteBundle {
+            sprite: Sprite {
+                color: Color::WHITE,
+                ..default()
+            },
+            texture: powerup_complex_texture.0.clone(),
+            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+            ..default()
+        },
+        Collider::from(SharedShape::ball(20.)),
+        Sensor,
+        PickupTag,
+        ActiveEvents::COLLISION_EVENTS,
+    ));
+}
+
+fn spawn_playership(
+    x: f32,
+    y: f32,
+    commands: &mut Commands,
+    playership_mesh_handle: &PlayerShipMeshHandle,
+    playership_material_handle: &PlayerShipMaterialHandle,
+    heading: Option<Heading>,
+    thrust_particle_texture: &ThrustParticleTexture,
+) {
+    let (ship, children) = gen_playership(
+        playership_mesh_handle.0.clone(),
+        playership_material_handle.0.clone(),
+        x,
+        y,
+        None,
+        thrust_particle_texture.0.clone().into(),
+    );
+    commands
+        .spawn(ship)
+        .with_children(|parent| {
+            parent.spawn(children.0);
+            parent.spawn(children.1);
+        })
+        .insert(OnPlayScreen);
 }
