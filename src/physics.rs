@@ -23,8 +23,6 @@ use crate::{
     utils::Heading,
 };
 
-
-
 pub fn apply_forces_ship(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -112,13 +110,16 @@ pub fn handle_collisions(
                 let proj_a_result = q_proj.get(*ent_a);
                 let proj_b_result = q_proj.get(*ent_b);
 
-                if let Ok((id, damage, transform, velocity)) = proj_a_result {
-                    // emit projectile impact effect
+                let proj_result = proj_a_result.ok().or(proj_b_result.ok());
+
+                if let Some((id, damage, transform, velocity)) = proj_result {
                     evw_collisions.send(CollisionEffectEvent {
-                        id,
-                        avatar: Avatars::Projectile,
-                        transform: Some(*transform),
-                        velocity: Some(*velocity),
+                        avatar_a: Avatars::Projectile,
+                        ent_a: Some(id),
+                        transform_a: Some(*transform),
+                        velocity_a: Some(*velocity),
+                        collision_radius_a: None,
+                        ..default()
                     });
                     commands.entity(id).insert(DespawnDelay(Timer::new(
                         Duration::from_secs_f32(2.0),
@@ -126,97 +127,44 @@ pub fn handle_collisions(
                     )));
                 }
 
-                if let Ok((id, damage, transform, velocity)) = proj_b_result {
-                    // emit projectile impact effect
-                    evw_collisions.send(CollisionEffectEvent {
-                        id,
-                        avatar: Avatars::Projectile,
-                        transform: Some(*transform),
-                        velocity: Some(*velocity),
-                    });
-                    commands.entity(id).insert(DespawnDelay(Timer::new(
-                        Duration::from_secs_f32(2.0),
-                        TimerMode::Once,
-                    )));
+                // proj-aster
+                {
+                    let aster_a_result = q_aster.get(*ent_a);
+                    let aster_b_result = q_aster.get(*ent_b);
+
+                    if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
+                        && [proj_a_result, proj_b_result].iter().any(|x| x.is_ok())
+                    {
+                        let (proj_id, proj_dmg, proj_transform, proj_velocity) =
+                            if proj_a_result.is_ok() {
+                                proj_a_result.unwrap()
+                            } else {
+                                proj_b_result.unwrap()
+                            };
+
+                        let aster_id = if aster_a_result.is_ok() {
+                            *ent_a
+                        } else {
+                            *ent_b
+                        };
+
+                        evw_collisions.send(CollisionEffectEvent {
+                            avatar_a: Avatars::Asteroid,
+                            ent_a: Some(aster_id),
+                            avatar_b: Some(Avatars::Projectile),
+                            ..default() // ent_b: None,
+                                        // transform: None,
+                                        // velocity: None,
+                                        // collision_r: None,
+                        });
+                        // commands.spawn(AudioBundle {
+                        //     source: destroy_asteroid_sound.0.clone(),
+                        //     settings: PlaybackSettings::DESPAWN,
+                        // });
+                        score.0 += 1;
+                        commands.entity(aster_id).despawn_recursive();
+                    }
                 }
-
-                // // proj-aster
-                // {
-                //     let aster_a_result = q_aster.get(*ent_a);
-                //     let aster_b_result = q_aster.get(*ent_b);
-
-                //     if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
-                //         && [proj_a_result, proj_b_result].iter().any(|x| x.is_ok())
-                //     {
-                //         let proj_id = if proj_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
-
-                //         let aster_id = if aster_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
-
-                //         if let Ok((mut aster_health, _)) = q_aster.get_mut(aster_id) {
-                //             // TODO remove collider, add DespawnDelay component
-                //             // TODO system_despawn_delay
-                //             // ticks down delay timer then destroys ent
-                //             if aster_health.0 <= 1 {
-                //                 commands.spawn(AudioBundle {
-                //                     source: destroy_asteroid_sound.0.clone(),
-                //                     settings: PlaybackSettings::DESPAWN,
-                //                 });
-                //                 commands.entity(aster_id).despawn();
-                //                 score.0 += 1;
-                //             } else {
-                //                 if let Ok(proj_dmg) = q_proj.get(proj_id) {
-                //                     aster_health.0 -= proj_dmg.0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
-
-                // // aster-ship
-                // {
-                //     let ship_a_result = q_ship.get(*ent_a);
-                //     let ship_b_result = q_ship.get(*ent_b);
-                //     let aster_a_result = q_aster.get(*ent_a);
-                //     let aster_b_result = q_aster.get(*ent_b);
-
-                //     if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
-                //         && [ship_a_result, ship_b_result].iter().any(|x| x.is_ok())
-                //     {
-                //         let aster_id = if aster_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
-
-                //         let ship_id = if ship_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
-
-                //         if let Ok(mut ship_health) = q_ship.get_mut(ship_id) {
-                //             if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {
-                //                 ship_health.0 -= aster_dmg.0;
-
-                //                 if ship_health.0 <= 1 {
-                //                     commands.spawn(AudioBundle {
-                //                         source: destroy_ship_sound.0.clone(),
-                //                         settings: PlaybackSettings::DESPAWN,
-                //                     });
-                //                     commands.entity(ship_id).despawn_recursive();
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
 
                 // // proj-ship
                 // {
@@ -267,6 +215,48 @@ pub fn handle_collisions(
                 //         });
                 //     }
                 // }
+
+                // // aster-ship
+                // {
+                //     let ship_a_result = q_ship.get(*ent_a);
+                //     let ship_b_result = q_ship.get(*ent_b);
+                //     let aster_a_result = q_aster.get(*ent_a);
+                //     let aster_b_result = q_aster.get(*ent_b);
+
+                //     if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
+                //         && [ship_a_result, ship_b_result].iter().any(|x| x.is_ok())
+                //     {
+                //         let aster_id = if aster_a_result.is_ok() {
+                //             *ent_a
+                //         } else {
+                //             *ent_b
+                //         };
+
+                //         let ship_id = if ship_a_result.is_ok() {
+                //             *ent_a
+                //         } else {
+                //             *ent_b
+                //         };
+
+                //         if let Ok(mut ship_health) = q_ship.get_mut(ship_id) {
+                //             if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {
+                //                 ship_health.0 -= aster_dmg.0;
+
+                //                 if ship_health.0 <= 1 {
+                //                     commands.spawn(AudioBundle {
+                //                         source: destroy_ship_sound.0.clone(),
+                //                         settings: PlaybackSettings::DESPAWN,
+                //                     });
+                //                     commands.entity(ship_id).despawn_recursive();
+                //                 }
+                //             }
+                //         }
+                //     }
+                // }
+
+                // TODO if it's asteroid to asteroid, only send one collision effect
+                // let aster_a_result = q_aster.get(*ent_a);
+                // let aster_b_result = q_aster.get(*ent_b);
             }
             _ => {}
         }

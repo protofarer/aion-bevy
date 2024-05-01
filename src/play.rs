@@ -28,10 +28,7 @@ use crate::{
         handle_collision_effects, handle_destruction_effects, CollisionEffectEvent,
         DestructionEffectEvent,
     },
-    events::{
-        update_collide_asteroid_w_asteroid, update_collide_ship, CollisionAsteroidAsteroidEvent,
-        CollisionProjectileEvent,
-    },
+    events::{update_collide_ship, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
