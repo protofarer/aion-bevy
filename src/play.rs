@@ -24,8 +24,11 @@ use crate::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
     },
+    effects::{
+        handle_collision_effects, handle_destruction_effects, CollisionEffectEvent,
+        DestructionEffectEvent,
+    },
     events::{
-        effects_projectile_collision, handle_destruction_events,
         update_collide_asteroid_w_asteroid, update_collide_ship, CollisionAsteroidAsteroidEvent,
         CollisionProjectileEvent,
     },
@@ -37,10 +40,7 @@ use crate::{
         WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL, SCOREBOARD_FONT_SIZE,
         SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
-    physics::{
-        apply_forces_ship, emit_collision_effects_fixme, emit_destruction_effects,
-        emit_thruster_particles,
-    },
+    physics::{apply_forces_ship, handle_collisions, handle_destructions},
     utils::Heading,
 };
 
@@ -53,8 +53,8 @@ pub fn play_plugin(app: &mut App) {
                 apply_forces_ship,
                 wraparound,
                 ship_fire,
-                emit_collision_effects,
-                emit_destruction_effects,
+                handle_collisions,
+                handle_destructions,
                 despawn_delay,
             )
                 .chain()
@@ -64,18 +64,12 @@ pub fn play_plugin(app: &mut App) {
             Update,
             (
                 (
-                    handle_destruction_events,
                     draw_boundary,
-                    draw_line,
-                    update_scoreboard,
-                    emit_thruster_particles,
-                    update_collide_asteroid_w_asteroid,
-                    effects_projectile_collision,
-                    update_collide_ship,
-                    emit_collision_effects_fixme,
-                    print_ship_heading,
-                )
-                    .run_if(in_state(GameState::Play)),
+                    handle_collision_effects,
+                    // handle_destruction_effects,
+                    // update_scoreboard,
+                ),
+                // .run_if(in_state(GameState::Play)),
                 (despawn_screen::<OnPlayScreen>, setup_play)
                     .chain()
                     .run_if(press_r_restart_play),
@@ -83,7 +77,9 @@ pub fn play_plugin(app: &mut App) {
         )
         .add_systems(OnExit(GameState::Play), despawn_screen::<OnPlayScreen>)
         .add_event::<CollisionAsteroidAsteroidEvent>()
-        .add_event::<CollisionProjectileEvent>();
+        .add_event::<CollisionProjectileEvent>()
+        .add_event::<DestructionEffectEvent>()
+        .add_event::<CollisionEffectEvent>();
 }
 
 pub fn setup_play(
@@ -330,15 +326,6 @@ pub fn setup_play(
         transform: Transform::from_xyz(200., -100., 0.).with_scale(Vec3::splat(0.10)),
         ..default()
     },));
-}
-
-pub fn draw_line(mut painter: ShapePainter) {
-    let line_color = Color::ORANGE;
-
-    painter.thickness = 1.;
-    painter.color = line_color;
-
-    painter.line(Vec3::new(0., -100., 0.), Vec3::new(30., -100., 0.));
 }
 
 pub fn draw_boundary(mut painter: ShapePainter) {
@@ -614,3 +601,12 @@ fn print_ship_heading(mut query: Query<&Transform, With<PlayerShipTag>>) {
         let heading = Heading::from(transform.rotation);
     }
 }
+
+// pub fn draw_line(mut painter: ShapePainter) {
+//     let line_color = Color::ORANGE;
+
+//     painter.thickness = 1.;
+//     painter.color = line_color;
+
+//     painter.line(Vec3::new(0., -100., 0.), Vec3::new(30., -100., 0.));
+// }
