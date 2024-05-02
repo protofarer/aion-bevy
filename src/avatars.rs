@@ -16,7 +16,8 @@ use crate::{
         ParticlePixelTexture, PlayerShipTexture, AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
         AMBIENT_LINEAR_FRICTION_COEFFICIENT, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH,
         INIT_SHIP_RESTITUTION, INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R,
-        MEDIUM_ASTEROID_HEALTH, MEDIUM_ASTEROID_R, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
+        MEDIUM_ASTEROID_HEALTH, MEDIUM_ASTEROID_R, SHIP_HALF_WIDTH, SHIP_LENGTH_AFT,
+        SHIP_LENGTH_FORE, SHIP_THRUST_FORCE_MAGNITUDE, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
     },
     utils::Heading,
 };
@@ -30,7 +31,6 @@ pub struct PlayerShip {
     rigidbody: RigidBody,
     velocity: Velocity,
     primary_thrust_force: ExternalForce,
-    primary_thrust_magnitude: PrimaryThrustMagnitude,
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
@@ -60,15 +60,15 @@ pub fn gen_playership(
                 },
                 ..default()
             },
+            rigidbody: RigidBody::Dynamic,
             collider: Collider::triangle(
-                Vec2::new(-15., -15.),
-                Vec2::X * 22.,
-                Vec2::new(-15., 15.),
+                Vec2::new(-SHIP_HALF_WIDTH, -SHIP_LENGTH_AFT),
+                Vec2::Y * SHIP_LENGTH_FORE,
+                Vec2::new(SHIP_HALF_WIDTH, -SHIP_LENGTH_AFT),
             ),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             health: Health(INIT_SHIP_HEALTH),
             turn_rate: TurnRate(INIT_SHIP_TURN_RATE),
-            rigidbody: RigidBody::Dynamic,
             velocity: Velocity {
                 linvel: Vec2::ZERO,
                 angvel: 0.,
@@ -77,7 +77,6 @@ pub fn gen_playership(
                 force: Vec2::ZERO,
                 torque: 0.,
             },
-            primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
             restitution: Restitution {
                 coefficient: INIT_SHIP_RESTITUTION,
                 combine_rule: CoefficientCombineRule::Multiply, // extra bouncy for player's sake to not get quickly dribbled to death
@@ -94,7 +93,7 @@ pub fn gen_playership(
             ThrusterBundle::new(
                 0.,
                 0.,
-                DEFAULT_THRUST_FORCE_MAGNITUDE,
+                SHIP_THRUST_FORCE_MAGNITUDE,
                 particle_pixel_texture.0.clone().into(),
             ),
         ),

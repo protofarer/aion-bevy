@@ -10,14 +10,12 @@ use bevy_rapier2d::{
 };
 
 use crate::{
-    avatars::{ProjectileEmitterBundle, Thrust},
-    components::{
-        AsteroidTag, CollisionRadius, Damage, FireType, Health, PrimaryThrustMagnitude,
-        ProjectileTag, TurnRate,
-    },
+    avatars::{ProjectileEmitterBundle, Thrust, ThrusterBundle},
+    components::{AsteroidTag, CollisionRadius, Damage, FireType, Health, ProjectileTag, TurnRate},
     game::{
-        Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-        BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION,
+        ParticlePixelTexture, PlayerShipTexture, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
+        AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED,
+        DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE,
         INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH,
         INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
     },
@@ -25,8 +23,9 @@ use crate::{
 };
 
 #[derive(Bundle)]
-pub struct Ship<M: Material2d> {
-    mesh_bundle: MaterialMesh2dBundle<M>,
+pub struct Ship {
+    sprite_bundle: SpriteBundle,
+    // mesh_bundle: MaterialMesh2dBundle<M>,
     turn_rate: TurnRate,
     collider: Collider,
     collision_events: ActiveEvents,
@@ -34,28 +33,33 @@ pub struct Ship<M: Material2d> {
     rigidbody: RigidBody,
     velocity: Velocity,
     primary_thrust_force: ExternalForce,
-    primary_thrust_magnitude: PrimaryThrustMagnitude,
     restitution: Restitution,
     gravity: GravityScale,
     damping: Damping,
 }
 
-impl<M: Material2d> Ship<M> {
+impl Ship {
     pub fn new(
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        mesh: Handle<Mesh>,
-        material: Handle<M>,
-    ) -> (Self, (ProjectileEmitterBundle, Thrust)) {
+        texture: &PlayerShipTexture,
+        // mesh: Handle<Mesh>,
+        // material: Handle<M>,
+        particle_pixel_texture: &ParticlePixelTexture,
+    ) -> (Self, (ProjectileEmitterBundle, ThrusterBundle)) {
         (
             Self {
-                mesh_bundle: MaterialMesh2dBundle {
-                    mesh: mesh.into(),
-                    material,
+                sprite_bundle: SpriteBundle {
+                    sprite: Sprite {
+                        color: Color::rgba(1., 0., 0., 1.),
+                        ..default()
+                    },
+                    texture: texture.0.clone().into(),
                     transform: Transform {
                         translation: Vec3::new(x, y, 1.),
-                        rotation: heading.unwrap_or_default().into(),
+                        scale: Vec2::splat(0.8).extend(1.),
+                        // rotation: heading.unwrap_or_default().into(),
                         ..default()
                     },
                     ..default()
@@ -77,7 +81,6 @@ impl<M: Material2d> Ship<M> {
                     force: Vec2::ZERO,
                     torque: 0.,
                 },
-                primary_thrust_magnitude: PrimaryThrustMagnitude::default(),
                 restitution: Restitution::coefficient(0.7),
                 gravity: GravityScale(0.),
                 damping: Damping {
@@ -86,12 +89,13 @@ impl<M: Material2d> Ship<M> {
                 },
             },
             (
-                ProjectileEmitterBundle::new(
-                    22.,
-                    heading,
-                    Some(FireType::Primary),
+                ProjectileEmitterBundle::new(22., heading, Some(FireType::Primary)),
+                ThrusterBundle::new(
+                    0.,
+                    0.,
+                    DEFAULT_THRUST_FORCE_MAGNITUDE,
+                    particle_pixel_texture.0.clone().into(),
                 ),
-                Thrust::default(),
             ),
         )
     }

@@ -48,7 +48,7 @@ pub const DEFAULT_TURNRATE: f32 = 10.;
 pub const DEFAULT_DAMAGE: i32 = 1;
 pub const DEFAULT_DURATION_SECS: u64 = 5;
 pub const DEFAULT_RESTITUTION: f32 = 0.5;
-pub const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
+pub const DEFAULT_THRUST_FORCE_MAGNITUDE: f32 = 10000.;
 
 // UI
 pub const SCOREBOARD_FONT_SIZE: f32 = 20.0;
@@ -62,8 +62,13 @@ pub const INIT_SHIP_TURN_RATE: TurnSpeed = 5.;
 pub const INIT_SHIP_HEALTH: i32 = 3;
 pub const INIT_SHIP_PROJECTILE_SPEED: f32 = 500.;
 pub const INIT_SHIP_RESTITUTION: f32 = 0.9;
-pub const SHIP_LENGTH: f32 = 22.;
-pub const SHIP_HALF_WIDTH: f32 = 15.;
+pub const SHIP_LENGTH_FORE: f32 = 18.;
+pub const SHIP_LENGTH_AFT: f32 = 18.;
+pub const SHIP_HALF_WIDTH: f32 = 10.;
+// prod
+// pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 10000.;
+// dev
+pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
 
 // Asteroid
 pub const INIT_ASTEROID_MOVESPEED: Speed = 300.;
@@ -85,10 +90,7 @@ pub fn game_plugin(app: &mut App) {
         .insert_resource(Score(0))
         .init_state::<GameState>()
         .add_systems(Startup, (load_assets, setup_menu).chain())
-        .add_plugins(play_plugin)
-        // .configure_sets(Update, PlaySet.run_if(in_state(GameState::Match)))
-        // .configure_sets(FixedUpdate, PlaySet.run_if(in_state(GameState::Match)))
-        ;
+        .add_plugins(play_plugin);
 }
 
 pub fn setup_menu(
@@ -136,15 +138,15 @@ pub fn load_assets(
     let asteroid_clash_sound = asset_server.load("sounds/asteroid_clash.wav");
     commands.insert_resource(AsteroidClashSound(asteroid_clash_sound));
 
-    let handle_playership_mesh = meshes.add(Triangle2d::new(
-        Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
-        Vec2::X * SHIP_LENGTH,
-        Vec2::new(-SHIP_HALF_WIDTH, SHIP_HALF_WIDTH),
-    ));
-    commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
+    // let handle_playership_mesh = meshes.add(Triangle2d::new(
+    //     Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
+    //     Vec2::Y * SHIP_LENGTH,
+    //     Vec2::new(SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
+    // ));
+    // commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
 
-    let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
-    commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
+    // let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
+    // commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
 
     let handle_white_colormaterial = materials.add(Color::WHITE);
     commands.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));
