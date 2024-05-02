@@ -12,7 +12,8 @@ use bevy_particle_systems::{
 use crate::archetypes::AsteroidSizes;
 use crate::audio::{
     AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
-    ShipDamagedSound, ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
+    ShipDamagedSound, ShipThrustSound, ShipThrustSoundStopwatch, SoulDestroyedSound,
+    VesselDestroyedSound,
 };
 use crate::avatars::{gen_asteroid, gen_playership_from_materialmesh};
 use crate::components::{Score, ScoreboardUi};
@@ -129,6 +130,10 @@ pub fn load_assets(
     // let moderate_thud_sound = asset_server.load("sounds/moderate_thud.wav");
     // commands.insert_resource(SomeThudSound(moderate_thud_sound));
 
+    // v2.0 astral gameplay
+    // let destroy_soul_sound = asset_server.load("sounds/human_death.wav");
+    // commands.insert_resource(SoulDestroyedSound(destroy_soul_sound));
+
     let light_shot_sound = asset_server.load("sounds/light_shot.wav");
     commands.insert_resource(ProjectileEmitSound(light_shot_sound));
 
@@ -144,8 +149,8 @@ pub fn load_assets(
     let damage_ship_sound = asset_server.load("sounds/damage_ship.wav");
     commands.insert_resource(ShipDamagedSound(damage_ship_sound));
 
-    let destroy_ship_sound = asset_server.load("sounds/human_physical_death.wav");
-    commands.insert_resource(ShipDestroyedSound(destroy_ship_sound));
+    let destroy_vessel_sound = asset_server.load("sounds/physical_death.wav");
+    commands.insert_resource(VesselDestroyedSound(destroy_vessel_sound));
 
     let asteroid_clash_sound = asset_server.load("sounds/asteroid_clash.wav");
     commands.insert_resource(AsteroidClashSound(asteroid_clash_sound));
@@ -166,31 +171,31 @@ pub fn load_assets(
     }
     commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
-    let playership_texture = asset_server.load("ship_K.png").into();
+    let playership_texture = asset_server.load("images/ship_K.png").into();
     commands.insert_resource(PlayerShipTexture(playership_texture));
 
-    let particle_pixel_texture = asset_server.load("px.png").into();
+    let particle_pixel_texture = asset_server.load("images/px.png").into();
     commands.insert_resource(ParticlePixelTexture(particle_pixel_texture));
 
-    let powerup_essential_texture = asset_server.load("enemy_A.png").into();
+    let powerup_essential_texture = asset_server.load("images/enemy_A.png").into();
     commands.insert_resource(PowerupEssentialTexture(powerup_essential_texture));
-    let powerup_simple_texture = asset_server.load("enemy_C.png").into();
+    let powerup_simple_texture = asset_server.load("images/enemy_C.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
-    let powerup_complex_texture = asset_server.load("enemy_E.png").into();
+    let powerup_complex_texture = asset_server.load("images/enemy_E.png").into();
     commands.insert_resource(PowerupComplexTexture(powerup_complex_texture));
 
-    let star_essential_texture = asset_server.load("star_06.png").into();
+    let star_essential_texture = asset_server.load("images/star_06.png").into();
     commands.insert_resource(StarEssentialTexture(star_essential_texture));
-    let star_simple_texture = asset_server.load("star_04.png").into();
+    let star_simple_texture = asset_server.load("images/star_04.png").into();
     commands.insert_resource(StarSimpleTexture(star_simple_texture));
-    let star_complex_texture = asset_server.load("star_08.png").into();
+    let star_complex_texture = asset_server.load("images/star_08.png").into();
     commands.insert_resource(StarComplexTexture(star_complex_texture));
 
-    let green_planet_texture = asset_server.load("planet00.png").into();
+    let green_planet_texture = asset_server.load("images/planet00.png").into();
     commands.insert_resource(PlanetGreenTexture(green_planet_texture));
-    let grey_planet_texture = asset_server.load("planet04.png").into();
+    let grey_planet_texture = asset_server.load("images/planet04.png").into();
     commands.insert_resource(PlanetGreyTexture(grey_planet_texture));
-    let purple_planet_texture = asset_server.load("planet09.png").into();
+    let purple_planet_texture = asset_server.load("images/planet09.png").into();
     commands.insert_resource(PlanetPurpleTexture(purple_planet_texture));
 }
 

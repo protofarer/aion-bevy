@@ -10,7 +10,7 @@ use bevy_rapier2d::prelude::*;
 use crate::{
     audio::{
         AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
-        ShipDestroyedSound, ShipThrustSound, ShipThrustSoundStopwatch,
+        ShipThrustSound, ShipThrustSoundStopwatch, SoulDestroyedSound,
     },
     avatars::Thrust,
     components::{
@@ -77,7 +77,7 @@ pub fn handle_collisions(
                 let ship_b = q_ship.get(*ent_b).is_ok();
                 let is_any_ship = ship_a || ship_b;
 
-                // Projectile Collision Effect ONLY (not incl damage)
+                // PROJ Collision Effect ONLY (not incl damage)
                 if let Some((id, damage, transform, velocity)) = any_proj {
                     evw_effects_collisions.send(CollisionEffectEvent {
                         avatar_a: Avatars::Projectile,
@@ -93,7 +93,7 @@ pub fn handle_collisions(
                     )));
                 }
 
-                // proj-aster
+                // PROJ-ASTER
                 // No asteroid sound, simply projectile collision effects as above
 
                 if is_any_aster && any_proj.is_some() {
@@ -116,7 +116,7 @@ pub fn handle_collisions(
                     }
                 }
 
-                // proj-ship
+                // PROJ-SHIP
                 if is_any_ship && any_proj.is_some() {
                     // (Entity, &mut Health, &Transform),
                     let (ship_id, mut ship_health, ship_transform) = if ship_a {
@@ -143,7 +143,7 @@ pub fn handle_collisions(
                     }
                 }
 
-                // // aster-aster
+                // ASTER-ASTER
                 if is_all_aster {
                     let (_, _, _, aster_a_transform, coll_r_a) = q_aster.get(*ent_a).unwrap();
                     let (_, _, _, aster_b_transform, _) = q_aster.get(*ent_b).unwrap();
@@ -157,43 +157,33 @@ pub fn handle_collisions(
                     });
                 }
 
-                // // aster-ship
-                // {
-                //     let ship_a_result = q_ship.get(*ent_a);
-                //     let ship_b_result = q_ship.get(*ent_b);
-                //     let aster_a_result = q_aster.get(*ent_a);
-                //     let aster_b_result = q_aster.get(*ent_b);
+                // ASTER-SHIP
+                if is_any_ship && is_any_aster {
+                    let any_aster = q_aster.get(*ent_a).ok().or(q_aster.get(*ent_b).ok());
 
-                //     if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
-                //         && [ship_a_result, ship_b_result].iter().any(|x| x.is_ok())
-                //     {
-                //         let aster_id = if aster_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
+                    let (ship_id, mut ship_health, ship_transform) = if ship_a {
+                        q_ship.get_mut(*ent_a).unwrap()
+                    } else {
+                        q_ship.get_mut(*ent_b).unwrap()
+                    };
+                    let (aster_id, _, aster_dmg, _, _) = any_aster.unwrap();
 
-                //         let ship_id = if ship_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
+                    ship_health.0 -= aster_dmg.0;
 
-                //         if let Ok(mut ship_health) = q_ship.get_mut(ship_id) {
-                //             if let Ok((_, aster_dmg)) = q_aster.get(aster_id) {
-                //                 ship_health.0 -= aster_dmg.0;
-
-                //                 if ship_health.0 <= 1 {
-                //                     commands.spawn(AudioBundle {
-                //                         source: destroy_ship_sound.0.clone(),
-                //                         settings: PlaybackSettings::DESPAWN,
-                //                     });
-                //                     commands.entity(ship_id).despawn_recursive();
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
+                    if ship_health.0 <= 0 {
+                        evw_effects_destruction.send(DestructionEffectEvent {
+                            avatar: Avatars::PlayerShip,
+                            transform: *ship_transform,
+                        });
+                        commands.entity(ship_id).despawn_recursive();
+                    } else {
+                        evw_effects_collisions.send(CollisionEffectEvent {
+                            avatar_a: Avatars::PlayerShip,
+                            transform_a: Some(*ship_transform),
+                            ..default()
+                        });
+                    }
+                }
             }
             _ => {}
         }

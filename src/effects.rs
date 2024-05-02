@@ -10,7 +10,7 @@ use bevy_rapier2d::dynamics::Velocity;
 use crate::{
     audio::{
         AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
-        ShipDestroyedSound,
+        SoulDestroyedSound, VesselDestroyedSound,
     },
     avatars::Thrust,
     components::{CollisionRadius, PlayerShipTag},
@@ -170,14 +170,24 @@ pub fn handle_destruction_effects(
     mut commands: Commands,
     mut ev_w: EventReader<DestructionEffectEvent>,
     destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
-    destroy_ship_sound: Res<ShipDestroyedSound>,
+    destroy_vessel_sound: Res<VesselDestroyedSound>,
+    damage_ship_sound: Res<ShipDamagedSound>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in ev_w.read() {
         match event.avatar {
             Avatars::PlayerShip => {
+                // Post v1.0: astral/cosmic/etheral body gameplay
+                // commands.spawn(AudioBundle {
+                //     source: destroy_soul_sound.0.clone(),
+                //     settings: PlaybackSettings::DESPAWN,
+                // });
                 commands.spawn(AudioBundle {
-                    source: destroy_ship_sound.0.clone(),
+                    source: destroy_vessel_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+                commands.spawn(AudioBundle {
+                    source: damage_ship_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
                 emit_ship_destruction_particles(
