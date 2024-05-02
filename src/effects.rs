@@ -8,7 +8,10 @@ use bevy_particle_systems::{
 use bevy_rapier2d::dynamics::Velocity;
 
 use crate::{
-    audio::{AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound, ShipDestroyedSound},
+    audio::{
+        AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
+        ShipDestroyedSound,
+    },
     avatars::Thrust,
     components::{CollisionRadius, PlayerShipTag},
     events::Avatars,
@@ -28,8 +31,9 @@ pub struct CollisionEffectEvent {
     pub transform_a: Option<Transform>,
     pub velocity_a: Option<Velocity>,
     pub collision_radius_a: Option<CollisionRadius>,
-    pub ent_b: Option<Entity>,
     pub avatar_b: Option<Avatars>,
+    pub ent_b: Option<Entity>,
+    pub transform_b: Option<Transform>,
 }
 
 impl Default for CollisionEffectEvent {
@@ -40,8 +44,9 @@ impl Default for CollisionEffectEvent {
             transform_a: None,
             velocity_a: None,
             collision_radius_a: None,
-            ent_b: None,
             avatar_b: None,
+            ent_b: None,
+            transform_b: None,
         }
     }
 }
@@ -64,6 +69,7 @@ pub fn handle_collision_effects(
     particle_pixel_texture: Res<ParticlePixelTexture>,
     proj_coll_sound: Res<ProjectileImpactSound>,
     damage_ship_sound: Res<ShipDamagedSound>,
+    asteroid_clash_sound: Res<AsteroidClashSound>,
 ) {
     for event in evr_coll_effects.read() {
         match event.avatar_a {
@@ -92,6 +98,23 @@ pub fn handle_collision_effects(
                 });
             }
             Avatars::Asteroid => {
+                match event.avatar_b {
+                    Some(Avatars::Asteroid) => {
+                        // emit clash parts
+                        commands.spawn(AudioBundle {
+                            source: asteroid_clash_sound.0.clone(),
+                            settings: PlaybackSettings::DESPAWN,
+                        });
+                        emit_asteroid_w_asteroid_collision_particles(
+                            &mut commands,
+                            &particle_pixel_texture,
+                            &event.transform_a.unwrap(),
+                            &event.collision_radius_a.unwrap(),
+                            &event.transform_b.unwrap(),
+                        );
+                    }
+                    _ => {}
+                }
                 // particles asteroid-asteroid collision
                 // sound clash
             }

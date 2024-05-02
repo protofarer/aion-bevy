@@ -82,6 +82,11 @@ pub const MEDIUM_ASTEROID_HEALTH: i32 = 3;
 pub const LARGE_ASTEROID_R: f32 = 50.;
 pub const LARGE_ASTEROID_HEALTH: i32 = 5;
 
+// Projectile
+// any lower than 0.01 seems to have little effect (essential projectile vs med asteroid)
+pub const PROJECTILE_RESTITUTION: f32 = 0.01;
+pub const PROJECTILE_MASS: f32 = 10.;
+
 pub fn game_plugin(app: &mut App) {
     app.add_plugins(RapierPhysicsPlugin::<NoUserData>::pixels_per_meter(2.))
         // .add_plugins(RapierDebugRenderPlugin::default())

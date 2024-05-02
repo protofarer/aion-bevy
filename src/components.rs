@@ -21,7 +21,6 @@ pub struct PlayerShipTag;
 #[derive(Component)]
 pub struct PickupTag;
 
-
 // DATA
 
 #[derive(Component)]
@@ -124,7 +123,7 @@ impl Default for ProjectileEmission {
 #[derive(Resource, Default)]
 pub struct Score(pub usize);
 
-#[derive(Component)]
+#[derive(Component, Copy, Clone)]
 pub struct CollisionRadius(pub f32);
 
 #[derive(Component)]

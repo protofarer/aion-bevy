@@ -53,7 +53,7 @@ pub fn handle_collisions(
         ),
     >,
     mut q_aster: Query<
-        (Entity, &mut Health, &Damage, &Transform),
+        (Entity, &mut Health, &Damage, &Transform, &CollisionRadius),
         (
             With<AsteroidTag>,
             Without<PlayerShipTag>,
@@ -97,7 +97,7 @@ pub fn handle_collisions(
                 // No asteroid sound, simply projectile collision effects as above
 
                 if is_any_aster && any_proj.is_some() {
-                    let (aster_id, mut aster_health, _, aster_transform) = if aster_a {
+                    let (aster_id, mut aster_health, _, aster_transform, _) = if aster_a {
                         q_aster.get_mut(*ent_a).unwrap()
                     } else {
                         q_aster.get_mut(*ent_b).unwrap()
@@ -144,16 +144,18 @@ pub fn handle_collisions(
                 }
 
                 // // aster-aster
-                // {
-                //     let aster_a_result = q_aster.get(*ent_a);
-                //     let aster_b_result = q_aster.get(*ent_b);
-                //     if [aster_a_result, aster_b_result].iter().all(|x| x.is_ok()) {
-                //         commands.spawn(AudioBundle {
-                //             source: asteroid_clash_sound.0.clone(),
-                //             settings: PlaybackSettings::DESPAWN,
-                //         });
-                //     }
-                // }
+                if is_all_aster {
+                    let (_, _, _, aster_a_transform, coll_r_a) = q_aster.get(*ent_a).unwrap();
+                    let (_, _, _, aster_b_transform, _) = q_aster.get(*ent_b).unwrap();
+                    evw_effects_collisions.send(CollisionEffectEvent {
+                        avatar_a: Avatars::Asteroid,
+                        transform_a: Some(*aster_a_transform),
+                        collision_radius_a: Some(*coll_r_a),
+                        avatar_b: Some(Avatars::Asteroid),
+                        transform_b: Some(*aster_b_transform),
+                        ..default()
+                    });
+                }
 
                 // // aster-ship
                 // {

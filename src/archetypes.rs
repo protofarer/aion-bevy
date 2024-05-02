@@ -13,11 +13,7 @@ use crate::{
     avatars::{ProjectileEmitterBundle, Thrust, ThrusterBundle},
     components::{AsteroidTag, CollisionRadius, Damage, FireType, Health, ProjectileTag, TurnRate},
     game::{
-        ParticlePixelTexture, PlayerShipTexture, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT,
-        AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED,
-        DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE,
-        INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH,
-        INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, RIGHT_WALL, TOP_WALL,
+        ParticlePixelTexture, PlayerShipTexture, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, PROJECTILE_MASS, PROJECTILE_RESTITUTION, RIGHT_WALL, TOP_WALL
     },
     utils::Heading,
 };
@@ -213,7 +209,7 @@ impl ProjectileBundle {
         };
         let restitution = match restitution_coeff {
             Some(x) => Restitution::coefficient(x),
-            None => Restitution::coefficient(DEFAULT_RESTITUTION),
+            None => Restitution::coefficient(PROJECTILE_RESTITUTION),
         };
         let gravity = match gravity_scale {
             Some(x) => GravityScale(x),
@@ -229,7 +225,7 @@ impl ProjectileBundle {
             velocity,
             restitution,
             gravity,
-            mass: AdditionalMassProperties::Mass(100.),
+            mass: AdditionalMassProperties::Mass(PROJECTILE_MASS),
             tag: ProjectileTag,
         }
     }
@@ -247,9 +243,9 @@ impl Default for ProjectileBundle {
             collider: Collider::ball(1.),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             velocity,
-            restitution: Restitution::coefficient(DEFAULT_RESTITUTION),
+            restitution: Restitution::coefficient(PROJECTILE_RESTITUTION),
             gravity: GravityScale(0.),
-            mass: AdditionalMassProperties::Mass(100.),
+            mass: AdditionalMassProperties::Mass(PROJECTILE_MASS),
             tag: ProjectileTag,
         }
     }
