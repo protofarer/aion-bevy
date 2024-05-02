@@ -116,8 +116,8 @@ pub fn setup_play(
         5,
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
-        200.,
         0.,
+        100.,
         Velocity {
             linvel: Heading(0.).linvel(0.),
             angvel: 0.5,

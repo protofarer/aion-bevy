@@ -6,7 +6,7 @@ use bevy_rapier2d::{
     dynamics::{
         AdditionalMassProperties, Damping, ExternalForce, GravityScale, RigidBody, Velocity,
     },
-    geometry::{ActiveEvents, Collider, Restitution},
+    geometry::{ActiveEvents, Collider, ColliderMassProperties, Restitution},
 };
 
 use crate::{
@@ -260,6 +260,7 @@ pub struct AsteroidBundle<M: Material2d> {
     mesh_bundle: MaterialMesh2dBundle<M>,
     rigidbody: RigidBody,
     collider: Collider,
+    collider_mass_properties: ColliderMassProperties,
     collision_radius: CollisionRadius,
     collision_events: ActiveEvents,
     // TODO scale animations with force (as opposed to bruting size) https://rapier.rs/docs/user_guides/bevy_plugin/advanced_collision_detection#the-contact-graph
@@ -327,6 +328,7 @@ impl<M: Material2d> AsteroidBundle<M> {
             velocity,
             damage,
             collider: Collider::ball(r),
+            collider_mass_properties: ColliderMassProperties::Density(5.0),
             collision_radius: CollisionRadius(r),
             collision_events: ActiveEvents::COLLISION_EVENTS,
             // collision_force_events: ActiveEvents::COLLISION_FORCE_EVENTS,
