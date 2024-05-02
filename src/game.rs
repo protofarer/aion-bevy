@@ -63,10 +63,8 @@ pub const INIT_SHIP_RESTITUTION: f32 = 1.7;
 pub const SHIP_LENGTH_FORE: f32 = 18.;
 pub const SHIP_LENGTH_AFT: f32 = 18.;
 pub const SHIP_HALF_WIDTH: f32 = 10.;
-// prod
-// pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 10000.;
-// dev
-pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 50000.;
+// pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 10000.; // prod
+pub const SHIP_THRUST_FORCE_MAGNITUDE: f32 = 50000.; // dev
 
 // Asteroid
 pub const INIT_ASTEROID_MOVESPEED: Speed = 300.;
@@ -114,8 +112,22 @@ pub fn load_assets(
 
     commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
 
+    // let handle_playership_mesh = meshes.add(Triangle2d::new(
+    //     Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
+    //     Vec2::Y * SHIP_LENGTH,
+    //     Vec2::new(SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
+    // ));
+
+    // commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
+
+    // let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
+    // commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
+
     // let background_music = asset_server.load("sounds/Windless Slopes.ogg");
     // commands.insert_resource(BackgroundMusic(background_music));
+
+    // let moderate_thud_sound = asset_server.load("sounds/moderate_thud.wav");
+    // commands.insert_resource(SomeThudSound(moderate_thud_sound));
 
     let light_shot_sound = asset_server.load("sounds/light_shot.wav");
     commands.insert_resource(ProjectileEmitSound(light_shot_sound));
@@ -129,9 +141,6 @@ pub fn load_assets(
     let destroy_asteroid_sound = asset_server.load("sounds/destroy_asteroid.wav");
     commands.insert_resource(AsteroidDestroyedSound(destroy_asteroid_sound));
 
-    // let moderate_thud_sound = asset_server.load("sounds/moderate_thud.wav");
-    // commands.insert_resource(SomeThudSound(moderate_thud_sound));
-
     let damage_ship_sound = asset_server.load("sounds/damage_ship.wav");
     commands.insert_resource(ShipDamagedSound(damage_ship_sound));
 
@@ -140,16 +149,6 @@ pub fn load_assets(
 
     let asteroid_clash_sound = asset_server.load("sounds/asteroid_clash.wav");
     commands.insert_resource(AsteroidClashSound(asteroid_clash_sound));
-
-    // let handle_playership_mesh = meshes.add(Triangle2d::new(
-    //     Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
-    //     Vec2::Y * SHIP_LENGTH,
-    //     Vec2::new(SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
-    // ));
-    // commands.insert_resource(PlayerShipMeshHandle(handle_playership_mesh));
-
-    // let handle_playership_colormaterial = materials.add(Color::LIME_GREEN);
-    // commands.insert_resource(PlayerShipMaterialHandle(handle_playership_colormaterial));
 
     let handle_white_colormaterial = materials.add(Color::WHITE);
     commands.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));

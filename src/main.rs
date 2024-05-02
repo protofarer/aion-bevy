@@ -34,7 +34,7 @@ fn main() {
         .add_plugins(Shape2dPlugin::default())
         .add_plugins(ParticleSystemPlugin)
         .insert_resource(ClearColor(BACKGROUND_COLOR))
-        .add_systems(Startup, (setup_fps_counter).chain()) // setup_play here while no scenes impl'd
+        .add_systems(Startup, (setup_fps_counter).chain())
         .add_systems(
             Update,
             (

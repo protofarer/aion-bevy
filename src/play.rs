@@ -17,20 +17,29 @@ use noise::{
 };
 
 use crate::{
-    archetypes::{AsteroidSizes, ProjectileBundle}, audio::ProjectileEmitSound, avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh}, components::{
+    archetypes::{AsteroidSizes, ProjectileBundle},
+    audio::ProjectileEmitSound,
+    avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh},
+    components::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
-    }, controls::{ship_fire, ship_turn, thrust_ship}, effects::{
+    },
+    controls::{ship_fire, ship_turn, thrust_ship},
+    effects::{
         handle_collision_effects, handle_destruction_effects, handle_thrust_effects,
         CollisionEffectEvent, DestructionEffectEvent, ThrustEffectEvent,
-    }, events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent}, game::{
+    },
+    events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
+    game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
         PowerupEssentialTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
         StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
         SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
-    }, physics::handle_collisions, utils::Heading
+    },
+    physics::handle_collisions,
+    utils::Heading,
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -53,6 +62,7 @@ pub fn play_plugin(app: &mut App) {
             (
                 (
                     draw_boundary,
+                    draw_grid,
                     handle_collision_effects,
                     handle_destruction_effects,
                     handle_thrust_effects,
@@ -72,15 +82,15 @@ pub fn play_plugin(app: &mut App) {
         .add_event::<ThrustEffectEvent>();
 }
 
+// mut meshes: ResMut<Assets<Mesh>>,
+// mut materials: ResMut<Assets<ColorMaterial>>,
+// playership_mesh_handle: Res<PlayerShipMeshHandle>,
+// playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
 pub fn setup_play(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
-    // mut meshes: ResMut<Assets<Mesh>>,
-    // mut materials: ResMut<Assets<ColorMaterial>>,
     asteroid_mesh_handles: Res<AsteroidMeshHandles>,
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
-    // playership_mesh_handle: Res<PlayerShipMeshHandle>,
-    // playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
     playership_texture: Res<PlayerShipTexture>,
     white_material_handle: Res<WhiteMaterialHandle>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
@@ -91,8 +101,8 @@ pub fn setup_play(
     star_simple_texture: Res<StarSimpleTexture>,
     star_complex_texture: Res<StarComplexTexture>,
     green_planet_texture: Res<PlanetGreenTexture>,
-    // grey_planet_texture: Res<PlanetGreyTexture>,
-    // purple_planet_texture: Res<PlanetPurpleTexture>,
+    grey_planet_texture: Res<PlanetGreyTexture>,
+    purple_planet_texture: Res<PlanetPurpleTexture>,
 ) {
     spawn_playership(
         0.,
@@ -316,6 +326,28 @@ pub fn setup_play(
         transform: Transform::from_xyz(200., -100., 0.).with_scale(Vec3::splat(0.10)),
         ..default()
     },));
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            // GOLD
+            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
+            // color: Color::rgba(1., 1., 1., 0.7),
+            ..default()
+        },
+        texture: grey_planet_texture.0.clone(),
+        transform: Transform::from_xyz(400., -100., 0.).with_scale(Vec3::splat(0.10)),
+        ..default()
+    },));
+    commands.spawn((SpriteBundle {
+        sprite: Sprite {
+            // GOLD
+            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
+            // color: Color::rgba(1., 1., 1., 0.7),
+            ..default()
+        },
+        texture: purple_planet_texture.0.clone(),
+        transform: Transform::from_xyz(600., -100., 0.).with_scale(Vec3::splat(0.10)),
+        ..default()
+    },));
 }
 
 pub fn draw_boundary(mut painter: ShapePainter) {
@@ -342,6 +374,38 @@ pub fn draw_boundary(mut painter: ShapePainter) {
         Vec3::new(width / 2., -height / 2., 0.),
         Vec3::new(width / 2., height / 2., 0.),
     );
+}
+
+pub fn draw_grid(mut painter: ShapePainter) {
+    let height = TOP_WALL - BOTTOM_WALL;
+    let width = RIGHT_WALL - LEFT_WALL;
+    let line_color = Color::rgba(1., 1., 1., 0.025);
+
+    painter.thickness = 1.;
+    painter.color = line_color;
+
+    let s = 100;
+
+    for x in (0..(width / 2.0) as usize).step_by(s) {
+        painter.line(
+            Vec3::new(x as f32, -height / 2., 0.),
+            Vec3::new(x as f32, height / 2., 0.),
+        );
+        painter.line(
+            Vec3::new(-(x as f32), -height / 2., 0.),
+            Vec3::new(-(x as f32), height / 2., 0.),
+        );
+    }
+    for y in (0..(height / 2.0) as usize).step_by(s) {
+        painter.line(
+            Vec3::new(-width / 2., y as f32, 0.),
+            Vec3::new(width / 2., y as f32, 0.),
+        );
+        painter.line(
+            Vec3::new(-width / 2., -(y as f32), 0.),
+            Vec3::new(width / 2., -(y as f32), 0.),
+        );
+    }
 }
 
 pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
