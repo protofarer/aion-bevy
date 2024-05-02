@@ -25,19 +25,19 @@ use crate::{
         ScoreboardUi, TurnRate,
     },
     effects::{
-        handle_collision_effects, handle_destruction_effects, CollisionEffectEvent,
-        DestructionEffectEvent,
+        handle_collision_effects, handle_destruction_effects, handle_thrust_effects,
+        CollisionEffectEvent, DestructionEffectEvent, ThrustEffectEvent,
     },
-    events::{update_collide_ship, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
+    events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
-        PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture, StarSimpleTexture,
-        WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL, SCOREBOARD_FONT_SIZE,
-        SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
+        PowerupEssentialTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
+        StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
+        SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
-    physics::{apply_forces_ship, handle_collisions, handle_destructions},
+    physics::{handle_collisions, thrust_ship},
     utils::Heading,
 };
 
@@ -47,11 +47,10 @@ pub fn play_plugin(app: &mut App) {
             FixedUpdate,
             (
                 ship_turn,
-                apply_forces_ship,
+                thrust_ship,
                 wraparound,
                 ship_fire,
                 handle_collisions,
-                handle_destructions,
                 despawn_delay,
             )
                 .chain()
@@ -63,7 +62,8 @@ pub fn play_plugin(app: &mut App) {
                 (
                     draw_boundary,
                     handle_collision_effects,
-                    // handle_destruction_effects,
+                    handle_destruction_effects,
+                    handle_thrust_effects,
                     // update_scoreboard,
                 ),
                 // .run_if(in_state(GameState::Play)),
@@ -76,7 +76,8 @@ pub fn play_plugin(app: &mut App) {
         .add_event::<CollisionAsteroidAsteroidEvent>()
         .add_event::<CollisionProjectileEvent>()
         .add_event::<DestructionEffectEvent>()
-        .add_event::<CollisionEffectEvent>();
+        .add_event::<CollisionEffectEvent>()
+        .add_event::<ThrustEffectEvent>();
 }
 
 pub fn setup_play(
@@ -91,7 +92,7 @@ pub fn setup_play(
     playership_texture: Res<PlayerShipTexture>,
     white_material_handle: Res<WhiteMaterialHandle>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
-    powerup_essential_texture: Res<PowerupSimpleTexture>,
+    powerup_essential_texture: Res<PowerupEssentialTexture>,
     powerup_simple_texture: Res<PowerupSimpleTexture>,
     powerup_complex_texture: Res<PowerupComplexTexture>,
     star_essential_texture: Res<StarEssentialTexture>,
@@ -510,7 +511,7 @@ fn spawn_essential_powerup(
     x: f32,
     y: f32,
     commands: &mut Commands,
-    powerup_essential_texture: &PowerupSimpleTexture,
+    powerup_essential_texture: &PowerupEssentialTexture,
 ) {
     commands.spawn((
         SpriteBundle {

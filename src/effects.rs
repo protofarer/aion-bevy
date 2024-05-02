@@ -2,13 +2,13 @@ use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use bevy_particle_systems::{
-    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, ParticleBurst, ParticleSystem,
-    ParticleSystemBundle, Playing,
+    CircleSegment, ColorOverTime, Curve, CurvePoint, EmitterShape, JitteredValue, Lerp,
+    ParticleBurst, ParticleSystem, ParticleSystemBundle, Playing, ValueOverTime,
 };
 use bevy_rapier2d::dynamics::Velocity;
 
 use crate::{
-    audio::ProjectileImpactSound,
+    audio::{AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound, ShipDestroyedSound},
     avatars::Thrust,
     components::{CollisionRadius, PlayerShipTag},
     events::Avatars,
@@ -48,8 +48,14 @@ impl Default for CollisionEffectEvent {
 
 #[derive(Event)]
 pub struct DestructionEffectEvent {
-    pub translation: Vec2,
+    pub transform: Transform,
     pub avatar: Avatars,
+}
+
+#[derive(Event)]
+pub struct ThrustEffectEvent {
+    pub id: Entity,
+    pub is_thrusting: bool,
 }
 
 pub fn handle_collision_effects(
@@ -57,6 +63,7 @@ pub fn handle_collision_effects(
     mut evr_coll_effects: EventReader<CollisionEffectEvent>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
     proj_coll_sound: Res<ProjectileImpactSound>,
+    damage_ship_sound: Res<ShipDamagedSound>,
 ) {
     for event in evr_coll_effects.read() {
         match event.avatar_a {
@@ -73,7 +80,21 @@ pub fn handle_collision_effects(
                     settings: PlaybackSettings::DESPAWN,
                 });
             }
-            Avatars::Asteroid => {}
+            Avatars::PlayerShip => {
+                emit_ship_collision_particles(
+                    &mut commands,
+                    &event.transform_a.unwrap_or_default(),
+                    &particle_pixel_texture,
+                );
+                commands.spawn(AudioBundle {
+                    source: damage_ship_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+            }
+            Avatars::Asteroid => {
+                // particles asteroid-asteroid collision
+                // sound clash
+            }
             _ => {}
         }
     }
@@ -125,41 +146,51 @@ fn emit_projectile_collision_particles(
 pub fn handle_destruction_effects(
     mut commands: Commands,
     mut ev_w: EventReader<DestructionEffectEvent>,
+    destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
+    destroy_ship_sound: Res<ShipDestroyedSound>,
+    particle_pixel_texture: Res<ParticlePixelTexture>,
 ) {
     for event in ev_w.read() {
         match event.avatar {
             Avatars::PlayerShip => {
-                // death sound
-                // death particles
+                commands.spawn(AudioBundle {
+                    source: destroy_ship_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+                emit_ship_destruction_particles(
+                    &mut commands,
+                    &event.transform,
+                    &particle_pixel_texture,
+                );
             }
-            Avatars::Asteroid => {}
+            Avatars::Asteroid => {
+                commands.spawn(AudioBundle {
+                    source: destroy_asteroid_sound.0.clone(),
+                    settings: PlaybackSettings::DESPAWN,
+                });
+            }
             _ => {}
         }
     }
 }
 
-// TODO this is an effect
-pub fn emit_thruster_particles(
-    commands: &mut Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    q_ship_exists: Query<(), With<PlayerShipTag>>,
+pub fn handle_thrust_effects(
+    mut commands: Commands,
+    mut evr_thrust_effect: EventReader<ThrustEffectEvent>,
     mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
     mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
 ) {
-    if q_ship_exists.get_single().is_ok() {
-        if keyboard_input.pressed(KeyCode::KeyS) {
-            for children in q_ship_children.iter_mut() {
-                for child in children {
-                    if let Ok(ent_id) = q_particle_system.get_mut(*child) {
+    for ThrustEffectEvent {
+        id: ent_id,
+        is_thrusting,
+    } in evr_thrust_effect.read()
+    {
+        if let Ok(children) = q_ship_children.get(*ent_id) {
+            for child in children.iter() {
+                if let Ok(ent_id) = q_particle_system.get_mut(*child) {
+                    if *is_thrusting {
                         commands.entity(ent_id).insert(Playing);
-                    }
-                }
-            }
-        }
-        if keyboard_input.just_released(KeyCode::KeyS) {
-            for children in q_ship_children.iter_mut() {
-                for child in children {
-                    if let Ok(ent_id) = q_particle_system.get_mut(*child) {
+                    } else {
                         commands.entity(ent_id).remove::<Playing>();
                     }
                 }
@@ -280,6 +311,77 @@ fn emit_asteroid_w_asteroid_collision_particles(
                 ..ParticleSystem::default()
             },
             transform: Transform::from_xyz(collision_pt.x, collision_pt.y, 0.0),
+            ..ParticleSystemBundle::default()
+        })
+        .insert(Playing);
+}
+
+fn emit_ship_collision_particles(
+    commands: &mut Commands,
+    transform: &Transform,
+    particle_pixel_texture: &ParticlePixelTexture,
+) {
+    commands
+        .spawn(ParticleSystemBundle {
+            particle_system: ParticleSystem {
+                max_particles: 25,
+                texture: particle_pixel_texture.0.clone().into(),
+                spawn_rate_per_second: 0.0.into(),
+                initial_speed: JitteredValue::jittered(175.0, -50.0..0.0),
+                lifetime: JitteredValue::jittered(3.0, -0.5..0.0),
+                color: ColorOverTime::Gradient(Curve::new(vec![
+                    CurvePoint::new(Color::RED, 0.0),
+                    CurvePoint::new(Color::BLACK, 0.5),
+                    CurvePoint::new(Color::BLACK, 1.0),
+                ])),
+                looping: false,
+                system_duration_seconds: 1.0,
+                max_distance: Some(500.0),
+                scale: 2.0.into(),
+                // scale: ValueOverTime::Lerp(Lerp::new(2.0, 20.)),
+                bursts: vec![ParticleBurst::new(0.0, 25)],
+                ..ParticleSystem::default()
+            },
+            transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.0),
+            ..ParticleSystemBundle::default()
+        })
+        .insert(Playing);
+}
+
+fn emit_ship_destruction_particles(
+    commands: &mut Commands,
+    transform: &Transform,
+    particle_pixel_texture: &ParticlePixelTexture,
+) {
+    //TODO scale with ship's contained/accumulated energy, aka spirit energy aka prana aka chi
+    let n_particles = 1000;
+    let n_burst = 200;
+    let rate = 150.0;
+    let duration = 6.0;
+    commands
+        .spawn(ParticleSystemBundle {
+            particle_system: ParticleSystem {
+                max_particles: n_particles,
+                texture: particle_pixel_texture.0.clone().into(),
+                spawn_rate_per_second: ValueOverTime::Lerp(Lerp::new(rate, 0.)),
+                initial_speed: JitteredValue::jittered(200.0, -100.0..0.0),
+                lifetime: JitteredValue::jittered(duration, (-duration * 0.3)..0.0),
+                color: ColorOverTime::Gradient(Curve::new(vec![
+                    CurvePoint::new(Color::RED, 0.0),
+                    CurvePoint::new(Color::BLACK, 1.0),
+                ])),
+                emitter_shape: EmitterShape::CircleSegment(CircleSegment {
+                    radius: 10.0.into(),
+                    ..default()
+                }),
+                looping: false,
+                system_duration_seconds: duration,
+                max_distance: Some(1000.0),
+                scale: 3.0.into(),
+                bursts: vec![ParticleBurst::new(0.0, n_burst)],
+                ..ParticleSystem::default()
+            },
+            transform: Transform::from_xyz(transform.translation.x, transform.translation.y, 0.0),
             ..ParticleSystemBundle::default()
         })
         .insert(Playing);

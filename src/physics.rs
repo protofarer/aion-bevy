@@ -17,22 +17,23 @@ use crate::{
         AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
         Score,
     },
-    effects::{CollisionEffectEvent, DestructionEffectEvent},
+    effects::{CollisionEffectEvent, DestructionEffectEvent, ThrustEffectEvent},
     events::{Avatars, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::ParticlePixelTexture,
     utils::Heading,
 };
 
-pub fn apply_forces_ship(
+pub fn thrust_ship(
     mut commands: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<(&Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
+    mut evw_thrust_effect: EventWriter<ThrustEffectEvent>,
+    mut q_ship: Query<(Entity, &Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
     mut q_thruster: Query<&Thrust>,
     thrust_sound: Res<ShipThrustSound>,
     mut thrust_sound_stopwatch: ResMut<ShipThrustSoundStopwatch>,
     time: Res<Time>,
 ) {
-    for (children, mut ext_force, transform) in q_ship.iter_mut() {
+    for (ent_id, children, mut ext_force, transform) in q_ship.iter_mut() {
         // clear all external forces and torques on ship
         *ext_force = ExternalForce::default();
 
@@ -63,6 +64,16 @@ pub fn apply_forces_ship(
                 source: thrust_sound.0.clone(),
                 ..default()
             });
+            evw_thrust_effect.send(ThrustEffectEvent {
+                id: ent_id,
+                is_thrusting: true,
+            });
+        }
+        if keyboard_input.just_released(KeyCode::KeyS) {
+            evw_thrust_effect.send(ThrustEffectEvent {
+                id: ent_id,
+                is_thrusting: false,
+            });
         }
     }
 }
@@ -77,7 +88,8 @@ pub fn apply_forces_ship(
 pub fn handle_collisions(
     mut commands: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
-    mut evw_collisions: EventWriter<CollisionEffectEvent>,
+    mut evw_effects_collisions: EventWriter<CollisionEffectEvent>,
+    mut evw_effects_destruction: EventWriter<DestructionEffectEvent>,
     mut score: ResMut<Score>,
     q_proj: Query<
         (Entity, &Damage, &Transform, &Velocity),
@@ -88,7 +100,7 @@ pub fn handle_collisions(
         ),
     >,
     mut q_ship: Query<
-        &mut Health,
+        (Entity, &mut Health, &Transform),
         (
             With<PlayerShipTag>,
             Without<ProjectileTag>,
@@ -96,7 +108,7 @@ pub fn handle_collisions(
         ),
     >,
     mut q_aster: Query<
-        (&mut Health, &Damage),
+        (Entity, &mut Health, &Damage, &Transform),
         (
             With<AsteroidTag>,
             Without<PlayerShipTag>,
@@ -107,13 +119,22 @@ pub fn handle_collisions(
     for event in evr_collisions.read() {
         match event {
             CollisionEvent::Started(ent_a, ent_b, _flags) => {
-                let proj_a_result = q_proj.get(*ent_a);
-                let proj_b_result = q_proj.get(*ent_b);
+                let proj_a = q_proj.get(*ent_a).ok();
+                let proj_b = q_proj.get(*ent_b).ok();
+                let any_proj = proj_a.or(proj_b);
 
-                let proj_result = proj_a_result.ok().or(proj_b_result.ok());
+                let aster_a = q_aster.get(*ent_a).is_ok();
+                let aster_b = q_aster.get(*ent_b).is_ok();
+                let is_any_aster = aster_a || aster_b;
+                let is_all_aster = aster_a && aster_b;
 
-                if let Some((id, damage, transform, velocity)) = proj_result {
-                    evw_collisions.send(CollisionEffectEvent {
+                let ship_a = q_ship.get(*ent_a).is_ok();
+                let ship_b = q_ship.get(*ent_b).is_ok();
+                let is_any_ship = ship_a || ship_b;
+
+                // Projectile Collision Effect ONLY (not incl damage)
+                if let Some((id, damage, transform, velocity)) = any_proj {
+                    evw_effects_collisions.send(CollisionEffectEvent {
                         avatar_a: Avatars::Projectile,
                         ent_a: Some(id),
                         transform_a: Some(*transform),
@@ -128,81 +149,54 @@ pub fn handle_collisions(
                 }
 
                 // proj-aster
-                {
-                    let aster_a_result = q_aster.get(*ent_a);
-                    let aster_b_result = q_aster.get(*ent_b);
+                // No asteroid sound, simply projectile collision effects as above
 
-                    if [aster_a_result, aster_b_result].iter().any(|x| x.is_ok())
-                        && [proj_a_result, proj_b_result].iter().any(|x| x.is_ok())
-                    {
-                        let (proj_id, proj_dmg, proj_transform, proj_velocity) =
-                            if proj_a_result.is_ok() {
-                                proj_a_result.unwrap()
-                            } else {
-                                proj_b_result.unwrap()
-                            };
+                if is_any_aster && any_proj.is_some() {
+                    let (aster_id, mut aster_health, _, aster_transform) = if aster_a {
+                        q_aster.get_mut(*ent_a).unwrap()
+                    } else {
+                        q_aster.get_mut(*ent_b).unwrap()
+                    };
+                    let (_proj_id, proj_dmg, _proj_transform, _proj_velocity) = any_proj.unwrap();
 
-                        let aster_id = if aster_a_result.is_ok() {
-                            *ent_a
-                        } else {
-                            *ent_b
-                        };
+                    aster_health.0 -= proj_dmg.0;
 
-                        evw_collisions.send(CollisionEffectEvent {
-                            avatar_a: Avatars::Asteroid,
-                            ent_a: Some(aster_id),
-                            avatar_b: Some(Avatars::Projectile),
-                            ..default() // ent_b: None,
-                                        // transform: None,
-                                        // velocity: None,
-                                        // collision_r: None,
-                        });
-                        // commands.spawn(AudioBundle {
-                        //     source: destroy_asteroid_sound.0.clone(),
-                        //     settings: PlaybackSettings::DESPAWN,
-                        // });
+                    if aster_health.0 <= 0 {
                         score.0 += 1;
+                        evw_effects_destruction.send(DestructionEffectEvent {
+                            avatar: Avatars::Asteroid,
+                            transform: *aster_transform,
+                        });
                         commands.entity(aster_id).despawn_recursive();
                     }
                 }
 
-                // // proj-ship
-                // {
-                //     let ship_a_result = q_ship.get(*ent_a);
-                //     let ship_b_result = q_ship.get(*ent_b);
-                //     let proj_a_result = q_proj.get(*ent_a);
-                //     let proj_b_result = q_proj.get(*ent_b);
+                // proj-ship
+                if is_any_ship && any_proj.is_some() {
+                    // (Entity, &mut Health, &Transform),
+                    let (ship_id, mut ship_health, ship_transform) = if ship_a {
+                        q_ship.get_mut(*ent_a).unwrap()
+                    } else {
+                        q_ship.get_mut(*ent_b).unwrap()
+                    };
+                    let (_proj_id, proj_dmg, _proj_transform, _proj_velocity) = any_proj.unwrap();
 
-                //     if [proj_a_result, proj_b_result].iter().any(|x| x.is_ok())
-                //         && [ship_a_result, ship_b_result].iter().any(|x| x.is_ok())
-                //     {
-                //         let proj_id = if proj_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
+                    ship_health.0 -= proj_dmg.0;
 
-                //         let ship_id = if ship_a_result.is_ok() {
-                //             *ent_a
-                //         } else {
-                //             *ent_b
-                //         };
-
-                //         if let Ok(mut ship_health) = q_ship.get_mut(ship_id) {
-                //             if ship_health.0 <= 1 {
-                //                 commands.spawn(AudioBundle {
-                //                     source: destroy_ship_sound.0.clone(),
-                //                     settings: PlaybackSettings::DESPAWN,
-                //                 });
-                //                 commands.entity(ship_id).despawn();
-                //             } else {
-                //                 if let Ok(proj_dmg) = q_proj.get(proj_id) {
-                //                     ship_health.0 -= proj_dmg.0;
-                //                 }
-                //             }
-                //         }
-                //     }
-                // }
+                    if ship_health.0 <= 0 {
+                        evw_effects_destruction.send(DestructionEffectEvent {
+                            avatar: Avatars::PlayerShip,
+                            transform: *ship_transform,
+                        });
+                        commands.entity(ship_id).despawn_recursive();
+                    } else {
+                        evw_effects_collisions.send(CollisionEffectEvent {
+                            avatar_a: Avatars::PlayerShip,
+                            transform_a: Some(*ship_transform),
+                            ..default()
+                        });
+                    }
+                }
 
                 // // aster-aster
                 // {
@@ -253,48 +247,8 @@ pub fn handle_collisions(
                 //         }
                 //     }
                 // }
-
-                // TODO if it's asteroid to asteroid, only send one collision effect
-                // let aster_a_result = q_aster.get(*ent_a);
-                // let aster_b_result = q_aster.get(*ent_b);
             }
             _ => {}
-        }
-    }
-}
-
-//
-// pub fn emit_collision_effects(
-//     mut commands: Commands,
-//     mut ev_w: EventWriter<EffectsCollisionEvent>,
-// )
-
-// TODO move to effects.rs
-// read health, emit destroy effects
-// chain after handle_collisions
-pub fn handle_destructions(
-    mut commands: Commands,
-    mut ev_w: EventWriter<DestructionEffectEvent>,
-    mut q_health: Query<(Entity, &Health)>,
-    q_aster: Query<(), With<AsteroidTag>>,
-    q_ship: Query<(), With<PlayerShipTag>>,
-) {
-    for (ent_id, health) in q_health.iter() {
-        if let Ok(()) = q_aster.get(ent_id) {
-            if health.0 <= 0 {
-                ev_w.send(DestructionEffectEvent {
-                    translation: Vec2::new(0., 0.),
-                    avatar: Avatars::Asteroid,
-                });
-            }
-        }
-        if let Ok(()) = q_ship.get(ent_id) {
-            if health.0 <= 0 {
-                ev_w.send(DestructionEffectEvent {
-                    translation: Vec2::new(0., 0.),
-                    avatar: Avatars::PlayerShip,
-                });
-            }
         }
     }
 }

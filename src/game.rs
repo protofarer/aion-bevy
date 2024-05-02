@@ -16,7 +16,7 @@ use crate::audio::{
 };
 use crate::avatars::{gen_asteroid, gen_playership_from_materialmesh};
 use crate::components::{Score, ScoreboardUi};
-use crate::physics::{apply_forces_ship, handle_collisions};
+use crate::physics::{handle_collisions, thrust_ship};
 use crate::play::{
     despawn_delay, draw_boundary, play_plugin, ship_fire, ship_turn, update_scoreboard, wraparound,
 };
@@ -169,7 +169,7 @@ pub fn load_assets(
     commands.insert_resource(ParticlePixelTexture(particle_pixel_texture));
 
     let powerup_essential_texture = asset_server.load("enemy_A.png").into();
-    commands.insert_resource(PowerupSimpleTexture(powerup_essential_texture));
+    commands.insert_resource(PowerupEssentialTexture(powerup_essential_texture));
     let powerup_simple_texture = asset_server.load("enemy_C.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
     let powerup_complex_texture = asset_server.load("enemy_E.png").into();
