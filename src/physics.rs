@@ -23,61 +23,6 @@ use crate::{
     utils::Heading,
 };
 
-pub fn thrust_ship(
-    mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut evw_thrust_effect: EventWriter<ThrustEffectEvent>,
-    mut q_ship: Query<(Entity, &Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
-    mut q_thruster: Query<&Thrust>,
-    thrust_sound: Res<ShipThrustSound>,
-    mut thrust_sound_stopwatch: ResMut<ShipThrustSoundStopwatch>,
-    time: Res<Time>,
-) {
-    for (ent_id, children, mut ext_force, transform) in q_ship.iter_mut() {
-        // clear all external forces and torques on ship
-        *ext_force = ExternalForce::default();
-
-        thrust_sound_stopwatch.0.tick(time.delta());
-
-        if keyboard_input.pressed(KeyCode::KeyS) {
-            let mut sum_forces: f32 = 0.;
-            for child in children {
-                if let Ok(thruster) = q_thruster.get_mut(*child) {
-                    sum_forces += thruster.0;
-                }
-            }
-
-            let heading: Heading = transform.rotation.into();
-            ext_force.force.x += heading.x() * sum_forces;
-            ext_force.force.y += heading.y() * sum_forces;
-
-            if thrust_sound_stopwatch.0.elapsed() >= Duration::from_secs_f32(0.3) {
-                thrust_sound_stopwatch.0.reset();
-                commands.spawn(AudioBundle {
-                    source: thrust_sound.0.clone(),
-                    ..default()
-                });
-            }
-        }
-        if keyboard_input.just_pressed(KeyCode::KeyS) {
-            commands.spawn(AudioBundle {
-                source: thrust_sound.0.clone(),
-                ..default()
-            });
-            evw_thrust_effect.send(ThrustEffectEvent {
-                id: ent_id,
-                is_thrusting: true,
-            });
-        }
-        if keyboard_input.just_released(KeyCode::KeyS) {
-            evw_thrust_effect.send(ThrustEffectEvent {
-                id: ent_id,
-                is_thrusting: false,
-            });
-        }
-    }
-}
-
 // TODO
 // - SOLUTION: fixedupdate will emit effect events, data flows to Update systems, which handles perceivable effects
 //   - thus is more like option A

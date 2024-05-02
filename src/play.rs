@@ -17,28 +17,20 @@ use noise::{
 };
 
 use crate::{
-    archetypes::{AsteroidSizes, ProjectileBundle},
-    audio::ProjectileEmitSound,
-    avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh},
-    components::{
+    archetypes::{AsteroidSizes, ProjectileBundle}, audio::ProjectileEmitSound, avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh}, components::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
-    },
-    effects::{
+    }, controls::{ship_fire, ship_turn, thrust_ship}, effects::{
         handle_collision_effects, handle_destruction_effects, handle_thrust_effects,
         CollisionEffectEvent, DestructionEffectEvent, ThrustEffectEvent,
-    },
-    events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
-    game::{
+    }, events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent}, game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
         PowerupEssentialTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
         StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
         SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
-    },
-    physics::{handle_collisions, thrust_ship},
-    utils::Heading,
+    }, physics::handle_collisions, utils::Heading
 };
 
 pub fn play_plugin(app: &mut App) {
@@ -365,84 +357,6 @@ pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
         }
         if transform.translation.x <= LEFT_WALL {
             transform.translation.x = RIGHT_WALL - (LEFT_WALL - transform.translation.x);
-        }
-    }
-}
-
-pub fn ship_turn(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&mut Transform, &TurnRate), With<PlayerShipTag>>,
-    time: Res<Time>,
-) {
-    for (mut transform, turnrate) in query.iter_mut() {
-        // let mut thrust = 0.;
-        // if keyboard_input.pressed(KeyCode::KeyS) {
-        //     thrust += 1.;
-        // }
-        // get fwd vector by applying current rot to ships init facing vec
-        // let movement_direction = (transform.rotation * *DEFAULT_HEADING) * Vec3::X;
-        // let movement_distance = thrust * movespeed.0 * time.delta_seconds();
-        // let translation_delta = movement_direction * movement_distance;
-        // transform.translation += translation_delta;
-
-        let mut rotation_sign = 0.;
-        if keyboard_input.pressed(KeyCode::KeyA) {
-            rotation_sign += 1.;
-        }
-        if keyboard_input.pressed(KeyCode::KeyD) {
-            rotation_sign -= 1.;
-        }
-        transform.rotate_z(rotation_sign * turnrate.0 * time.delta_seconds());
-    }
-}
-
-pub fn ship_fire(
-    mut commands: Commands,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_ship: Query<&Children, With<PlayerShipTag>>,
-    mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
-    fire_sound: Res<ProjectileEmitSound>,
-) {
-    // when fire key pressed
-    if keyboard_input.pressed(KeyCode::Space) {
-        // find ship, get children projectile emitters
-        for children in &mut q_ship {
-            for child in children {
-                if let Ok((global_transform, mut emitter, firetype)) = q_emitter.get_mut(*child) {
-                    // spawn primary fire projectile
-                    match firetype {
-                        FireType::Primary => {
-                            let last_emit = emitter.last_emission_time;
-
-                            if last_emit.elapsed().as_millis() as i32 >= emitter.cooldown_ms {
-                                emitter.last_emission_time = Instant::now();
-
-                                let (_scale, rotation, translation) =
-                                    global_transform.to_scale_rotation_translation();
-
-                                commands
-                                    .spawn(ProjectileBundle::new(
-                                        translation.x,
-                                        translation.y,
-                                        Some(rotation.into()),
-                                        Some(emitter.projectile_speed),
-                                        None,
-                                        Some(emitter.damage),
-                                        None,
-                                        None,
-                                        Some(2.0),
-                                    ))
-                                    .insert(OnPlayScreen);
-                                commands.spawn(AudioBundle {
-                                    source: fire_sound.0.clone(),
-                                    ..default()
-                                });
-                            }
-                        }
-                        _ => (),
-                    };
-                }
-            }
         }
     }
 }
