@@ -3,7 +3,15 @@ use std::time::{Duration, Instant};
 use bevy::prelude::*;
 use bevy_rapier2d::dynamics::ExternalForce;
 
-use crate::{archetypes::ProjectileBundle, audio::{ProjectileEmitSound, ShipThrustSound, ShipThrustSoundStopwatch}, avatars::Thrust, components::{FireType, PlayerShipTag, ProjectileEmission, TurnRate}, effects::ThrustEffectEvent, game::OnPlayScreen, utils::Heading};
+use crate::{
+    archetypes::ProjectileBundle,
+    audio::{ProjectileEmitSound, ShipThrustSound, ShipThrustSoundStopwatch},
+    avatars::Thrust,
+    components::{FireType, PlayerShipTag, ProjectileEmission, TurnRate},
+    effects::ThrustEffectEvent,
+    game::OnPlayScreen,
+    utils::Heading,
+};
 
 pub fn ship_turn(
     keyboard_input: Res<ButtonInput<KeyCode>>,
@@ -28,7 +36,7 @@ pub fn ship_turn(
         if keyboard_input.pressed(KeyCode::KeyD) {
             rotation_sign -= 1.;
         }
-        transform.rotate_z(rotation_sign * turnrate.0 * time.delta_seconds());
+        transform.rotate_z(rotation_sign * **turnrate * time.delta_seconds());
     }
 }
 
@@ -103,7 +111,7 @@ pub fn thrust_ship(
             let mut sum_forces: f32 = 0.;
             for child in children {
                 if let Ok(thruster) = q_thruster.get_mut(*child) {
-                    sum_forces += thruster.0;
+                    sum_forces += **thruster;
                 }
             }
 

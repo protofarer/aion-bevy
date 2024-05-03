@@ -15,7 +15,6 @@ use crate::audio::{
     ShipDamagedSound, ShipThrustSound, ShipThrustSoundStopwatch, SoulDestroyedSound,
     VesselDestroyedSound,
 };
-use crate::avatars::{gen_asteroid, gen_playership_from_materialmesh};
 use crate::components::{Score, ScoreboardUi};
 use crate::physics::handle_collisions;
 use crate::play::{despawn_delay, draw_boundary, play_plugin, update_scoreboard, wraparound};
@@ -177,15 +176,15 @@ pub fn load_assets(
     let particle_pixel_texture = asset_server.load("images/px.png").into();
     commands.insert_resource(ParticlePixelTexture(particle_pixel_texture));
 
-    let powerup_essential_texture = asset_server.load("images/enemy_A.png").into();
-    commands.insert_resource(PowerupEssentialTexture(powerup_essential_texture));
+    let powerup_core_texture = asset_server.load("images/enemy_A.png").into();
+    commands.insert_resource(PowerupCoreTexture(powerup_core_texture));
     let powerup_simple_texture = asset_server.load("images/enemy_C.png").into();
     commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
     let powerup_complex_texture = asset_server.load("images/enemy_E.png").into();
     commands.insert_resource(PowerupComplexTexture(powerup_complex_texture));
 
-    let star_essential_texture = asset_server.load("images/star_06.png").into();
-    commands.insert_resource(StarEssentialTexture(star_essential_texture));
+    let star_core_texture = asset_server.load("images/star_06.png").into();
+    commands.insert_resource(StarCoreTexture(star_core_texture));
     let star_simple_texture = asset_server.load("images/star_04.png").into();
     commands.insert_resource(StarSimpleTexture(star_simple_texture));
     let star_complex_texture = asset_server.load("images/star_08.png").into();
@@ -215,55 +214,55 @@ pub struct PlaySet;
 
 // Meshes
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct AsteroidMeshHandles(pub Vec<Handle<Mesh>>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct AsteroidMaterialHandles(pub Vec<Handle<ColorMaterial>>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlayerShipMeshHandle(pub Handle<Mesh>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct ParticleMeshHandle(pub Handle<Mesh>);
 
 // Color materials
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlayerShipMaterialHandle(pub Handle<ColorMaterial>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct WhiteMaterialHandle(pub Handle<ColorMaterial>);
 
 // Textures
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct ParticlePixelTexture(pub Handle<Image>);
 
-#[derive(Resource)]
-pub struct PowerupEssentialTexture(pub Handle<Image>);
+#[derive(Resource, Deref)]
+pub struct PowerupCoreTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PowerupSimpleTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PowerupComplexTexture(pub Handle<Image>);
 
-#[derive(Resource)]
-pub struct StarEssentialTexture(pub Handle<Image>);
+#[derive(Resource, Deref)]
+pub struct StarCoreTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct StarSimpleTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct StarComplexTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlayerShipTexture(pub Handle<Image>);
 
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlanetGreenTexture(pub Handle<Image>);
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlanetGreyTexture(pub Handle<Image>);
-#[derive(Resource)]
+#[derive(Resource, Deref)]
 pub struct PlanetPurpleTexture(pub Handle<Image>);
 
 #[derive(Resource)]

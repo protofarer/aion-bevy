@@ -28,7 +28,7 @@ pub enum Player {
     A,
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct Health(pub i32);
 
 impl Default for Health {
@@ -37,7 +37,7 @@ impl Default for Health {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct TurnRate(pub TurnSpeed);
 
 impl Default for TurnRate {
@@ -46,7 +46,7 @@ impl Default for TurnRate {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct Damage(pub i32);
 
 impl Default for Damage {
@@ -70,7 +70,7 @@ pub enum FireType {
 //     pub fire_type: FireTypes,
 // }
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct PrimaryThrustMagnitude(pub f32);
 
 impl Default for PrimaryThrustMagnitude {
@@ -120,11 +120,11 @@ impl Default for ProjectileEmission {
     }
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Deref, DerefMut)]
 pub struct Score(pub usize);
 
-#[derive(Component, Copy, Clone)]
+#[derive(Component, Copy, Clone, Deref, DerefMut)]
 pub struct CollisionRadius(pub f32);
 
-#[derive(Component)]
+#[derive(Component, Deref, DerefMut)]
 pub struct DespawnDelay(pub Timer);

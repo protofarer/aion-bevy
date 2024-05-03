@@ -19,7 +19,7 @@ use crate::{
 };
 
 #[derive(Bundle)]
-pub struct Ship {
+pub struct ShipBundle {
     sprite_bundle: SpriteBundle,
     // mesh_bundle: MaterialMesh2dBundle<M>,
     turn_rate: TurnRate,
@@ -34,7 +34,7 @@ pub struct Ship {
     damping: Damping,
 }
 
-impl Ship {
+impl ShipBundle {
     pub fn new(
         x: f32,
         y: f32,

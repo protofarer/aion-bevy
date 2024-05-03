@@ -104,10 +104,10 @@ pub fn handle_collisions(
                     };
                     let (_proj_id, proj_dmg, _proj_transform, _proj_velocity) = any_proj.unwrap();
 
-                    aster_health.0 -= proj_dmg.0;
+                    **aster_health -= **proj_dmg;
 
-                    if aster_health.0 <= 0 {
-                        score.0 += 1;
+                    if **aster_health <= 0 {
+                        **score += 1;
                         evw_effects_destruction.send(DestructionEffectEvent {
                             avatar: Avatars::Asteroid,
                             transform: *aster_transform,
@@ -126,9 +126,9 @@ pub fn handle_collisions(
                     };
                     let (_proj_id, proj_dmg, _proj_transform, _proj_velocity) = any_proj.unwrap();
 
-                    ship_health.0 -= proj_dmg.0;
+                    **ship_health -= **proj_dmg;
 
-                    if ship_health.0 <= 0 {
+                    if **ship_health <= 0 {
                         evw_effects_destruction.send(DestructionEffectEvent {
                             avatar: Avatars::PlayerShip,
                             transform: *ship_transform,
@@ -145,12 +145,13 @@ pub fn handle_collisions(
 
                 // ASTER-ASTER
                 if is_all_aster {
-                    let (_, _, _, aster_a_transform, coll_r_a) = q_aster.get(*ent_a).unwrap();
+                    let (_, _, _, aster_a_transform, collision_radius_a) =
+                        q_aster.get(*ent_a).unwrap();
                     let (_, _, _, aster_b_transform, _) = q_aster.get(*ent_b).unwrap();
                     evw_effects_collisions.send(CollisionEffectEvent {
                         avatar_a: Avatars::Asteroid,
                         transform_a: Some(*aster_a_transform),
-                        collision_radius_a: Some(*coll_r_a),
+                        collision_radius_a: Some(*collision_radius_a),
                         avatar_b: Some(Avatars::Asteroid),
                         transform_b: Some(*aster_b_transform),
                         ..default()
@@ -168,9 +169,9 @@ pub fn handle_collisions(
                     };
                     let (aster_id, _, aster_dmg, _, _) = any_aster.unwrap();
 
-                    ship_health.0 -= aster_dmg.0;
+                    **ship_health -= **aster_dmg;
 
-                    if ship_health.0 <= 0 {
+                    if **ship_health <= 0 {
                         evw_effects_destruction.send(DestructionEffectEvent {
                             avatar: Avatars::PlayerShip,
                             transform: *ship_transform,

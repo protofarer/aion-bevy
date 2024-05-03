@@ -19,7 +19,7 @@ use noise::{
 use crate::{
     archetypes::{AsteroidSizes, ProjectileBundle},
     audio::ProjectileEmitSound,
-    avatars::{gen_asteroid, gen_playership, gen_playership_from_materialmesh},
+    avatars::{Asteroid, PlayerShip},
     components::{
         DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
         ScoreboardUi, TurnRate,
@@ -34,7 +34,7 @@ use crate::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
         ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
         PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
-        PowerupEssentialTexture, PowerupSimpleTexture, StarComplexTexture, StarEssentialTexture,
+        PowerupCoreTexture, PowerupSimpleTexture, StarComplexTexture, StarCoreTexture,
         StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
         SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
@@ -62,7 +62,7 @@ pub fn play_plugin(app: &mut App) {
             (
                 (
                     draw_boundary,
-                    draw_grid,
+                    // draw_grid,
                     handle_collision_effects,
                     handle_destruction_effects,
                     handle_thrust_effects,
@@ -94,112 +94,89 @@ pub fn setup_play(
     playership_texture: Res<PlayerShipTexture>,
     white_material_handle: Res<WhiteMaterialHandle>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
-    powerup_essential_texture: Res<PowerupEssentialTexture>,
+    powerup_core_texture: Res<PowerupCoreTexture>,
     powerup_simple_texture: Res<PowerupSimpleTexture>,
     powerup_complex_texture: Res<PowerupComplexTexture>,
-    star_essential_texture: Res<StarEssentialTexture>,
+    star_core_texture: Res<StarCoreTexture>,
     star_simple_texture: Res<StarSimpleTexture>,
     star_complex_texture: Res<StarComplexTexture>,
     green_planet_texture: Res<PlanetGreenTexture>,
     grey_planet_texture: Res<PlanetGreyTexture>,
     purple_planet_texture: Res<PlanetPurpleTexture>,
 ) {
-    spawn_playership(
+    PlayerShip::spawn(
         0.,
         -150.,
-        &mut commands,
-        &playership_texture,
         None,
+        &playership_texture,
         &particle_pixel_texture,
+        &mut commands,
     );
-
-    let ast1 = gen_asteroid(
+    Asteroid::spawn(
         AsteroidSizes::Medium,
         5,
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
         0.,
         100.,
+        None,
         Velocity {
             linvel: Heading(0.).linvel(0.),
             angvel: 0.5,
         },
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        &mut commands,
     );
-    commands.spawn(ast1).insert(OnPlayScreen);
 
-    // clashing asteroids
-    // let start_x = LEFT_WALL + 50.;
-    // let dx = 250.;
-    // let y = TOP_WALL - 50.;
-    // let separation_y = 150.;
-    // let pairs = [
-    //     (AsteroidSizes::Small, AsteroidSizes::Small),
-    //     (AsteroidSizes::Small, AsteroidSizes::Medium),
-    //     (AsteroidSizes::Small, AsteroidSizes::Large),
-    //     (AsteroidSizes::Medium, AsteroidSizes::Medium),
-    //     (AsteroidSizes::Medium, AsteroidSizes::Large),
-    //     (AsteroidSizes::Large, AsteroidSizes::Large),
-    // ];
-    // for (i, (size_a, size_b)) in pairs.iter().enumerate() {
-    //     commands
-    //         .spawn(gen_asteroid(
-    //             *size_a,
-    //             5,
-    //             asteroid_mesh_handles.0.clone(),
-    //             asteroid_material_handles.0.clone(),
-    //             start_x + (dx * i as f32),
-    //             y,
-    //             Velocity {
-    //                 linvel: Heading(-90.).linvel(20.),
-    //                 angvel: 0.,
-    //             },
-    //         ))
-    //         .insert(OnPlayScreen);
-    //     commands
-    //         .spawn(gen_asteroid(
-    //             *size_b,
-    //             5,
-    //             asteroid_mesh_handles.0.clone(),
-    //             asteroid_material_handles.0.clone(),
-    //             start_x + (dx * i as f32),
-    //             y - separation_y,
-    //             Velocity {
-    //                 linvel: Heading(90.).linvel(20.),
-    //                 angvel: 0.,
-    //             },
-    //         ))
-    //         .insert(OnPlayScreen);
-    // }
+    Asteroid::spawn(
+        AsteroidSizes::Medium,
+        5,
+        0.,
+        100.,
+        None,
+        Velocity {
+            linvel: Heading(0.).linvel(0.),
+            angvel: 0.5,
+        },
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        &mut commands,
+    );
+
+    dev_clashing_asteroids(
+        &mut commands,
+        &asteroid_mesh_handles,
+        &asteroid_material_handles,
+    );
 
     // Diagonal collision, see collision particles
-    commands
-        .spawn(gen_asteroid(
-            AsteroidSizes::Medium,
-            5,
-            asteroid_mesh_handles.0.clone(),
-            asteroid_material_handles.0.clone(),
-            LEFT_WALL + 50.,
-            BOTTOM_WALL + 300.,
-            Velocity {
-                linvel: Heading(-45.).linvel(20.),
-                angvel: 0.,
-            },
-        ))
-        .insert(OnPlayScreen);
-    commands
-        .spawn(gen_asteroid(
-            AsteroidSizes::Medium,
-            5,
-            asteroid_mesh_handles.0.clone(),
-            asteroid_material_handles.0.clone(),
-            LEFT_WALL + 130.,
-            BOTTOM_WALL + 230.,
-            Velocity {
-                linvel: Heading(135.).linvel(20.),
-                angvel: 0.,
-            },
-        ))
-        .insert(OnPlayScreen);
+    // commands
+    //     .spawn(gen_asteroid(
+    //         AsteroidSizes::Medium,
+    //         5,
+    //         asteroid_mesh_handles.0.clone(),
+    //         asteroid_material_handles.0.clone(),
+    //         LEFT_WALL + 50.,
+    //         BOTTOM_WALL + 300.,
+    //         Velocity {
+    //             linvel: Heading(-45.).linvel(20.),
+    //             angvel: 0.,
+    //         },
+    //     ))
+    //     .insert(OnPlayScreen);
+    // commands
+    //     .spawn(gen_asteroid(
+    //         AsteroidSizes::Medium,
+    //         5,
+    //         asteroid_mesh_handles.0.clone(),
+    //         asteroid_material_handles.0.clone(),
+    //         LEFT_WALL + 130.,
+    //         BOTTOM_WALL + 230.,
+    //         Velocity {
+    //             linvel: Heading(135.).linvel(20.),
+    //             angvel: 0.,
+    //         },
+    //     ))
+    //     .insert(OnPlayScreen);
 
     commands
         .spawn((
@@ -228,100 +205,18 @@ pub fn setup_play(
         ))
         .insert(OnPlayScreen);
 
-    // let noise = Perlin::new(0);
-    // let width = (RIGHT_WALL - LEFT_WALL);
-    // let height = (TOP_WALL - BOTTOM_WALL);
-    // for y in (0..height as i32).step_by(20) {
-    //     for x in (0..width as i32).step_by(20) {
-    //         let bright = noise.get([
-    //             x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
-    //             y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
-    //         ]);
-    //         let bright = ((bright + 1.0) / 2.0) as f32;
-
-    //         let dx = (noise.get([
-    //             x as f64 / (0.2 * width as f64),
-    //             y as f64 / (0.2 * width as f64),
-    //             0.0,
-    //         ]) * 50.) as f32;
-    //         let dy = (noise.get([
-    //             y as f64 / (0.2 * height as f64),
-    //             x as f64 / (0.2 * width as f64),
-    //             1.0,
-    //         ]) * 50.) as f32;
-    //         let dz = ((noise.get([
-    //             y as f64 / (0.2 * height as f64),
-    //             x as f64 / (0.2 * width as f64),
-    //             2.0,
-    //         ]) as f32)
-    //             + 1.0 / 2.0)
-    //             * 3.0;
-
-    //         commands.spawn(SpriteBundle {
-    //             sprite: Sprite {
-    //                 // color: Color::rgba(1. - bright, 0., bright as f32, bright as f32),
-    //                 color: Color::rgba(1., 1., 1., bright),
-    //                 ..default()
-    //             },
-    //             transform: Transform::from_xyz(
-    //                 // x as f32 - width / 2.,
-    //                 // y as f32 - height / 2.,
-    //                 x as f32 - (width / 2.0) + dx as f32,
-    //                 y as f32 - (height / 2.0) + dy as f32,
-    //                 0.0,
-    //             )
-    //             // .with_scale(Vec3::splat(dz)),
-    //             .with_scale(Vec3::splat(1.0)),
-    //             ..default()
-    //         });
-    //     }
-    // }
+    spawn_cosmic_background(
+        &mut commands,
+        &star_core_texture,
+        &star_simple_texture,
+        &star_complex_texture,
+    );
+    spawn_cosmic_wind(300., -400., None, &mut commands, &particle_pixel_texture);
 
     // Simple powerup, large and easy to get
-    spawn_essential_powerup(-200., 0., &mut commands, &powerup_essential_texture);
-    spawn_simple_powerup(-250., 0., &mut commands, &powerup_simple_texture);
-    spawn_complex_powerup(-300., 0., &mut commands, &powerup_complex_texture);
-
-    spawn_essential_star(&mut commands, &star_essential_texture);
-    spawn_simple_star(&mut commands, &star_simple_texture);
-    spawn_complex_star(&mut commands, &star_complex_texture);
-
-    // spawn_complex_star(&mut commands, &star_complex_texture);
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            // GOLD
-            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
-            // color: Color::rgba(1., 1., 1., 0.7),
-            ..default()
-        },
-        texture: green_planet_texture.0.clone(),
-        transform: Transform::from_xyz(200., -100., 0.).with_scale(Vec3::splat(0.10)),
-        ..default()
-    },));
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            // GOLD
-            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
-            // color: Color::rgba(1., 1., 1., 0.7),
-            ..default()
-        },
-        texture: grey_planet_texture.0.clone(),
-        transform: Transform::from_xyz(400., -100., 0.).with_scale(Vec3::splat(0.10)),
-        ..default()
-    },));
-    commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            // GOLD
-            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
-            // color: Color::rgba(1., 1., 1., 0.7),
-            ..default()
-        },
-        texture: purple_planet_texture.0.clone(),
-        transform: Transform::from_xyz(600., -100., 0.).with_scale(Vec3::splat(0.10)),
-        ..default()
-    },));
-
-    spawn_cosmic_wind(300., -400., None, &mut commands, &particle_pixel_texture);
+    // spawn_core_powerup(-200., 0., &mut commands, &powerup_core_texture);
+    // spawn_simple_powerup(-250., 0., &mut commands, &powerup_simple_texture);
+    // spawn_complex_powerup(-300., 0., &mut commands, &powerup_complex_texture);
 }
 
 pub fn draw_boundary(mut painter: ShapePainter) {
@@ -401,7 +296,7 @@ pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
 
 pub fn update_scoreboard(scoreboard: Res<Score>, mut query: Query<&mut Text, With<ScoreboardUi>>) {
     if let Ok(mut text) = query.get_single_mut() {
-        text.sections[1].value = scoreboard.0.to_string();
+        text.sections[1].value = scoreboard.to_string();
     }
 }
 
@@ -411,7 +306,7 @@ pub fn despawn_delay(
     time: Res<Time>,
 ) {
     for (entity, mut despawn_delay) in &mut query {
-        if despawn_delay.0.tick(time.delta()).just_finished() {
+        if despawn_delay.tick(time.delta()).just_finished() {
             commands.entity(entity).despawn();
         }
     }
@@ -421,49 +316,77 @@ pub fn press_r_restart_play(keyboard_input: Res<ButtonInput<KeyCode>>) -> bool {
     keyboard_input.just_pressed(KeyCode::KeyR)
 }
 
-fn spawn_essential_star(commands: &mut Commands, star_simple_texture: &StarEssentialTexture) {
+fn spawn_core_star(
+    x: f32,
+    y: f32,
+    scale: Option<f32>,
+    color: Option<Color>,
+    commands: &mut Commands,
+    star_simple_texture: &StarCoreTexture,
+) {
+    let scale = scale.unwrap_or(1.0);
+    let bg_brightness_constant = 0.2;
+    let color = match color {
+        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
+        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+    };
     commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::WHITE,
-            ..default()
-        },
+        sprite: Sprite { color, ..default() },
         texture: star_simple_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -50., 0.).with_scale(Vec3::splat(0.05)),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 * scale)),
         ..default()
     },));
 }
 
-fn spawn_simple_star(commands: &mut Commands, star_basic_texture: &StarSimpleTexture) {
+fn spawn_simple_star(
+    x: f32,
+    y: f32,
+    scale: Option<f32>,
+    color: Option<Color>,
+    commands: &mut Commands,
+    star_basic_texture: &StarSimpleTexture,
+) {
+    let scale = scale.unwrap_or(1.0);
+    let bg_brightness_constant = 0.2;
+    let color = match color {
+        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
+        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+    };
     commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            color: Color::rgba(1., 1., 1., 0.8),
-            ..default()
-        },
+        sprite: Sprite { color, ..default() },
         texture: star_basic_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -100., 0.).with_scale(Vec3::splat(0.10)),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 + (scale * 0.05))),
         ..default()
     },));
 }
 
-fn spawn_complex_star(commands: &mut Commands, star_complex_texture: &StarComplexTexture) {
+fn spawn_complex_star(
+    x: f32,
+    y: f32,
+    scale: Option<f32>,
+    color: Option<Color>,
+    commands: &mut Commands,
+    star_complex_texture: &StarComplexTexture,
+) {
+    let scale = scale.unwrap_or(1.0);
+    let bg_brightness_constant = 0.2;
+    let color = match color {
+        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
+        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+    };
     commands.spawn((SpriteBundle {
-        sprite: Sprite {
-            // GOLD
-            // color: Color::rgba(1.0, 0.84, 0.0, 0.5),
-            color: Color::rgba(1., 1., 1., 0.7),
-            ..default()
-        },
+        sprite: Sprite { color, ..default() },
         texture: star_complex_texture.0.clone(),
-        transform: Transform::from_xyz(-200., -150., 0.).with_scale(Vec3::splat(0.10)),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.04 + (scale * 0.09))),
         ..default()
     },));
 }
 
-fn spawn_essential_powerup(
+fn spawn_core_powerup(
     x: f32,
     y: f32,
     commands: &mut Commands,
-    powerup_essential_texture: &PowerupEssentialTexture,
+    powerup_core_texture: &PowerupCoreTexture,
 ) {
     commands.spawn((
         SpriteBundle {
@@ -471,7 +394,7 @@ fn spawn_essential_powerup(
                 color: Color::WHITE,
                 ..default()
             },
-            texture: powerup_essential_texture.0.clone(),
+            texture: powerup_core_texture.0.clone(),
             transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
             ..default()
         },
@@ -528,24 +451,6 @@ fn spawn_complex_powerup(
     ));
 }
 
-fn spawn_playership(
-    x: f32,
-    y: f32,
-    commands: &mut Commands,
-    playership_texture: &PlayerShipTexture,
-    heading: Option<Heading>,
-    particle_pixel_texture: &ParticlePixelTexture,
-) {
-    let (ship, children) = gen_playership(playership_texture, x, y, None, particle_pixel_texture);
-    commands
-        .spawn(ship)
-        .with_children(|parent| {
-            parent.spawn(children.0);
-            parent.spawn(children.1);
-        })
-        .insert(OnPlayScreen);
-}
-
 fn spawn_cosmic_wind(
     x: f32,
     y: f32,
@@ -573,11 +478,11 @@ fn spawn_cosmic_wind(
                 ])),
                 // color: ColorOverTime::Constant(Color::WHITE),
                 emitter_shape: EmitterShape::line(300.0, heading.unwrap_or_default().to_radians()),
-                looping: false,
+                looping: true,
                 despawn_on_finish: true, // true for one-shot, false for reuse like weapons fire...?
                 // rotate_to_movement_direction: true,
                 // initial_rotation: (0.0_f32).to_radians().into(),
-                system_duration_seconds: 1.0,
+                system_duration_seconds: 5.0,
                 max_distance: Some(1000.0),
                 scale: 2.0.into(),
                 ..ParticleSystem::default()
@@ -592,6 +497,142 @@ fn spawn_cosmic_wind(
 fn print_ship_heading(mut query: Query<&Transform, With<PlayerShipTag>>) {
     for transform in query.iter() {
         let heading = Heading::from(transform.rotation);
+    }
+}
+
+fn dev_clashing_asteroids(
+    commands: &mut Commands,
+    asteroid_mesh_handles: &AsteroidMeshHandles,
+    asteroid_material_handles: &AsteroidMaterialHandles,
+) {
+    let start_x = LEFT_WALL + 50.;
+    let dx = 250.;
+    let y = TOP_WALL - 50.;
+    let separation_y = 150.;
+    let pairs = [
+        (AsteroidSizes::Small, AsteroidSizes::Small),
+        (AsteroidSizes::Small, AsteroidSizes::Medium),
+        (AsteroidSizes::Small, AsteroidSizes::Large),
+        (AsteroidSizes::Medium, AsteroidSizes::Medium),
+        (AsteroidSizes::Medium, AsteroidSizes::Large),
+        (AsteroidSizes::Large, AsteroidSizes::Large),
+    ];
+    for (i, (size_a, size_b)) in pairs.iter().enumerate() {
+        Asteroid::spawn(
+            *size_a,
+            5,
+            start_x + (dx * i as f32),
+            y,
+            None,
+            Velocity {
+                linvel: Heading(-90.).linvel(20.),
+                angvel: 0.,
+            },
+            asteroid_mesh_handles.0.clone(),
+            asteroid_material_handles.0.clone(),
+            commands,
+        );
+        Asteroid::spawn(
+            *size_b,
+            5,
+            start_x + (dx * i as f32),
+            y - separation_y,
+            None,
+            Velocity {
+                linvel: Heading(90.).linvel(20.),
+                angvel: 0.,
+            },
+            asteroid_mesh_handles.0.clone(),
+            asteroid_material_handles.0.clone(),
+            commands,
+        );
+    }
+}
+
+fn spawn_cosmic_background(
+    mut commands: &mut Commands,
+    star_core_texture: &StarCoreTexture,
+    star_simple_texture: &StarSimpleTexture,
+    star_complex_texture: &StarComplexTexture,
+) {
+    let noise = Perlin::new(0);
+    let width = (RIGHT_WALL - LEFT_WALL);
+    let height = (TOP_WALL - BOTTOM_WALL);
+    let step = 50; // simple density
+    let density_core = 0.2;
+    let density_simple = 0.06;
+    let density_complex = 0.01;
+    for y in (0..height as i32).step_by(step) {
+        for x in (0..width as i32).step_by(step) {
+            let bright = noise.get([
+                x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
+                y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
+            ]);
+            let bright = ((bright + 1.0) / 2.0) as f32;
+
+            let dx = (noise.get([
+                x as f64 / (0.2 * width as f64),
+                y as f64 / (0.2 * width as f64),
+                0.0,
+            ]) * 100.) as f32;
+            let dy = (noise.get([
+                y as f64 / (0.2 * height as f64),
+                x as f64 / (0.2 * width as f64),
+                1.0,
+            ]) * 100.) as f32;
+            // let dz = ((noise.get([
+            //     y as f64 / (0.2 * height as f64),
+            //     x as f64 / (0.2 * width as f64),
+            //     2.0,
+            // ]) as f32)
+            //     + 1.0 / 2.0);
+
+            // stars only show when a noised value is above an arbitrary threshold
+            if rand::random::<f32>() > (1. - density_core) {
+                spawn_core_star(
+                    x as f32 - (width / 2.) + dx,
+                    y as f32 - (height / 2.) + dy,
+                    Some(bright),
+                    None,
+                    &mut commands,
+                    &star_core_texture,
+                );
+            } else if rand::random::<f32>() > (1. - density_simple) {
+                let rng = rand::random::<f32>();
+                let color = if rng < 0.1 {
+                    Color::RED
+                } else if rng < 0.2 {
+                    Color::BLUE
+                } else {
+                    Color::WHITE
+                };
+                spawn_simple_star(
+                    x as f32 - (width / 2.) + dx,
+                    y as f32 - (height / 2.) + dy,
+                    Some(bright),
+                    Some(color),
+                    &mut commands,
+                    &star_simple_texture,
+                );
+            } else if rand::random::<f32>() > (1. - density_complex) {
+                let rng = rand::random::<f32>();
+                let color = if rng < 0.1 {
+                    Color::VIOLET
+                } else if rng < 0.2 {
+                    Color::AQUAMARINE
+                } else {
+                    Color::WHITE
+                };
+                spawn_complex_star(
+                    x as f32 - (width / 2.) + dx,
+                    y as f32 - (height / 2.) + dy,
+                    Some(bright),
+                    Some(color),
+                    &mut commands,
+                    &star_complex_texture,
+                );
+            }
+        }
     }
 }
 
