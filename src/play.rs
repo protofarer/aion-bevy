@@ -228,34 +228,6 @@ pub fn setup_play(
         ))
         .insert(OnPlayScreen);
 
-    // commands
-    //     .spawn(ParticleSystemBundle {
-    //         particle_system: ParticleSystem {
-    //             max_particles: 50_000,
-    //             texture: asset_server.load("px.png").into(),
-    //             spawn_rate_per_second: 10.0.into(),
-    //             initial_speed: JitteredValue::jittered(70.0, -3.0..3.0),
-    //             lifetime: JitteredValue::jittered(3.0, -2.0..2.0),
-    //             color: ColorOverTime::Gradient(Curve::new(vec![
-    //                 CurvePoint::new(Color::PURPLE, 0.0),
-    //                 CurvePoint::new(Color::RED, 0.5),
-    //                 CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
-    //             ])),
-    //             emitter_shape: EmitterShape::line(200.0, std::f32::consts::FRAC_PI_4),
-    //             looping: true,
-    //             rotate_to_movement_direction: true,
-    //             initial_rotation: (-90.0_f32).to_radians().into(),
-    //             system_duration_seconds: 10.0,
-    //             max_distance: Some(300.0),
-    //             scale: 1.0.into(),
-    //             ..ParticleSystem::default()
-    //         },
-    //         transform: Transform::from_xyz(LEFT_WALL + 100., BOTTOM_WALL + 100., 0.0),
-    //         ..ParticleSystemBundle::default()
-    //     })
-    //     .insert(Playing)
-    //     .insert(OnPlayScreen);
-
     // let noise = Perlin::new(0);
     // let width = (RIGHT_WALL - LEFT_WALL);
     // let height = (TOP_WALL - BOTTOM_WALL);
@@ -348,6 +320,8 @@ pub fn setup_play(
         transform: Transform::from_xyz(600., -100., 0.).with_scale(Vec3::splat(0.10)),
         ..default()
     },));
+
+    spawn_cosmic_wind(300., -400., None, &mut commands, &particle_pixel_texture);
 }
 
 pub fn draw_boundary(mut painter: ShapePainter) {
@@ -569,6 +543,49 @@ fn spawn_playership(
             parent.spawn(children.0);
             parent.spawn(children.1);
         })
+        .insert(OnPlayScreen);
+}
+
+fn spawn_cosmic_wind(
+    x: f32,
+    y: f32,
+    heading: Option<Heading>,
+    commands: &mut Commands,
+    particle_pixel_texture: &ParticlePixelTexture,
+) {
+    commands
+        .spawn(ParticleSystemBundle {
+            particle_system: ParticleSystem {
+                max_particles: 1000,
+                texture: particle_pixel_texture.0.clone().into(),
+                spawn_rate_per_second: 100.0.into(),
+                initial_speed: JitteredValue::jittered(200.0, -50.0..0.0),
+                lifetime: JitteredValue::jittered(4.0, -3.0..0.0),
+                // color: ColorOverTime::Gradient(Curve::new(vec![
+                //     CurvePoint::new(Color::PURPLE, 0.0),
+                //     CurvePoint::new(Color::RED, 0.5),
+                //     CurvePoint::new(Color::rgba(0.0, 0.0, 1.0, 0.0), 1.0),
+                // ])),
+                color: ColorOverTime::Gradient(Curve::new(vec![
+                    CurvePoint::new(Color::rgba(1., 1., 1., 0.0), 0.0),
+                    CurvePoint::new(Color::rgba(1., 1., 1., 1.), 0.5),
+                    CurvePoint::new(Color::rgba(1., 1., 1., 0.0), 1.0),
+                ])),
+                // color: ColorOverTime::Constant(Color::WHITE),
+                emitter_shape: EmitterShape::line(300.0, heading.unwrap_or_default().to_radians()),
+                looping: false,
+                despawn_on_finish: true, // true for one-shot, false for reuse like weapons fire...?
+                // rotate_to_movement_direction: true,
+                // initial_rotation: (0.0_f32).to_radians().into(),
+                system_duration_seconds: 1.0,
+                max_distance: Some(1000.0),
+                scale: 2.0.into(),
+                ..ParticleSystem::default()
+            },
+            transform: Transform::from_xyz(x, y, 0.0),
+            ..ParticleSystemBundle::default()
+        })
+        .insert(Playing)
         .insert(OnPlayScreen);
 }
 
