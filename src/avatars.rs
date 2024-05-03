@@ -89,7 +89,7 @@ pub fn gen_playership(
             tag: PlayerShipTag,
         },
         (
-            ProjectileEmitterBundle::new(22., heading, Some(FireType::Primary)),
+            ProjectileEmitterBundle::new(22., heading, Some(FireType::Primary)), // this is ship fire
             ThrusterBundle::new(
                 0.,
                 0.,
@@ -179,14 +179,13 @@ impl ThrusterBundle {
                 particle_system: ParticleSystem {
                     max_particles: 1000,
                     texture: particle_texture,
-                    spawn_rate_per_second: 50.0.into(),
-                    initial_speed: JitteredValue::jittered(200.0, -25.0..25.0),
+                    spawn_rate_per_second: 100.0.into(),
+                    initial_speed: JitteredValue::jittered(200.0, -50.0..0.0),
                     lifetime: JitteredValue::jittered(2.0, -1.0..1.0),
                     color: ColorOverTime::Gradient(Curve::new(vec![
                         CurvePoint::new(Color::BLUE, 0.0),
-                        CurvePoint::new(Color::ORANGE, 0.025),
+                        CurvePoint::new(Color::YELLOW, 0.05),
                         CurvePoint::new(Color::RED, 0.1),
-                        CurvePoint::new(Color::RED, 1.),
                     ])),
                     emitter_shape: CircleSegment {
                         radius: 30.0.into(),
@@ -203,7 +202,7 @@ impl ThrusterBundle {
                     scale: 1.0.into(),
                     ..ParticleSystem::default()
                 },
-                transform: Transform::from_xyz(0., 20., 0.0),
+                transform: Transform::from_xyz(0., SHIP_LENGTH_AFT, 0.0),
                 ..ParticleSystemBundle::default()
             },
         }
