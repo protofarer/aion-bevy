@@ -1,23 +1,16 @@
+use bevy::render::camera::{ScalingMode, Viewport};
 use lazy_static::lazy_static;
 
 use bevy::prelude::*;
 use bevy::time::Stopwatch;
 use bevy_rapier2d::prelude::*;
 
-use bevy_particle_systems::{
-    ColorOverTime, Curve, CurvePoint, EmitterShape, JitteredValue, ParticleSystem,
-    ParticleSystemBundle, Playing,
-};
-
-use crate::archetypes::AsteroidSizes;
 use crate::audio::{
     AsteroidClashSound, AsteroidDestroyedSound, ProjectileEmitSound, ProjectileImpactSound,
-    ShipDamagedSound, ShipThrustSound, ShipThrustSoundStopwatch, SoulDestroyedSound,
-    VesselDestroyedSound,
+    ShipDamagedSound, ShipThrustSound, ShipThrustSoundStopwatch, VesselDestroyedSound,
 };
-use crate::components::{Score, ScoreboardUi};
-use crate::physics::handle_collisions;
-use crate::play::{despawn_delay, draw_boundary, play_plugin, update_scoreboard, wraparound};
+use crate::components::Score;
+use crate::play::play_plugin;
 use crate::utils::Heading;
 
 // NEWTYPES
@@ -29,12 +22,21 @@ pub const AMBIENT_LINEAR_FRICTION_COEFFICIENT: f32 = 0.6;
 pub const AMBIENT_ANGULAR_FRICTION_COEFFICIENT: f32 = 1.0;
 
 // play area dims assuming 1920x1080 window with 20% saved for debug and UI
-pub const LEFT_WALL: f32 = -768.;
-pub const RIGHT_WALL: f32 = 768.;
-pub const BOTTOM_WALL: f32 = -432.;
-pub const TOP_WALL: f32 = 432.;
+// pub const LOGICAL_WIDTH: f32 = 1920.;
+// pub const LOGICAL_HEIGHT: f32 = 1080.;
+// pub const LEFT_WALL: f32 = -768.;
+// pub const RIGHT_WALL: f32 = 768.;
+// pub const BOTTOM_WALL: f32 = -432.;
+// pub const TOP_WALL: f32 = 432.;
 
-// General
+pub const LOGICAL_WIDTH: f32 = 1920.;
+pub const LOGICAL_HEIGHT: f32 = 1080.;
+pub const LEFT_WALL: f32 = -LOGICAL_WIDTH / 2.0;
+pub const RIGHT_WALL: f32 = LOGICAL_WIDTH / 2.0;
+pub const BOTTOM_WALL: f32 = -LOGICAL_HEIGHT / 2.0;
+pub const TOP_WALL: f32 = LOGICAL_HEIGHT / 2.0;
+
+// Global Defaults
 pub const DEFAULT_MOVESPEED: Speed = 100.;
 pub const DEFAULT_HEALTH: i32 = 1;
 pub const DEFAULT_PROJECTILE_EMISSION_COOLDOWN: i32 = 100;
@@ -95,7 +97,6 @@ pub fn game_plugin(app: &mut App) {
 }
 
 pub fn setup_menu(
-    mut commands: Commands,
     mut game_state: ResMut<NextState<GameState>>, // mut meshes: ResMut<Assets<Mesh>>,
                                                   // mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
@@ -108,7 +109,15 @@ pub fn load_assets(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    commands.spawn(Camera2dBundle::default());
+    // commands.spawn(Camera2dBundle::default());
+    let mut camera_bundle = Camera2dBundle::default();
+    camera_bundle.projection.scaling_mode = ScalingMode::FixedVertical(1080.);
+    // camera_bundle.projection.scaling_mode = ScalingMode::WindowSize(0.5);
+    // {
+    //     max_width: 1920.,
+    //     max_height: 1080.,
+    // };
+    let camera = commands.spawn(camera_bundle);
 
     commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
 
@@ -157,7 +166,7 @@ pub fn load_assets(
     let handle_white_colormaterial = materials.add(Color::WHITE);
     commands.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));
 
-    let asteroid_material = materials.add(Color::GRAY);
+    let asteroid_material = materials.add(Color::hsl(0.0, 0.0, 0.5));
     commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material]));
 
     let mut asteroid_mesh_handles = vec![];

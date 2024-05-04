@@ -10,10 +10,10 @@ use bevy_rapier2d::{
 };
 
 use crate::{
-    avatars::{ProjectileEmitterBundle, Thrust, ThrusterBundle},
+    avatars::{ProjectileEmitterBundle, ThrusterBundle},
     components::{AsteroidTag, CollisionRadius, Damage, FireType, Health, ProjectileTag, TurnRate},
     game::{
-        ParticlePixelTexture, PlayerShipTexture, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_RESTITUTION, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, PROJECTILE_MASS, PROJECTILE_RESTITUTION, RIGHT_WALL, TOP_WALL
+        ParticlePixelTexture, PlayerShipTexture, Speed, AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT, BOTTOM_WALL, DEFAULT_HEALTH, DEFAULT_MOVESPEED, DEFAULT_ROTATION, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_ASTEROID_DAMAGE, INIT_ASTEROID_MOVESPEED, INIT_ASTEROID_RESTITUTION, INIT_SHIP_HEALTH, INIT_SHIP_PROJECTILE_SPEED, INIT_SHIP_TURN_RATE, LEFT_WALL, PROJECTILE_MASS, PROJECTILE_RESTITUTION, RIGHT_WALL, TOP_WALL
     },
     utils::Heading,
 };
@@ -336,51 +336,51 @@ impl<M: Material2d> AsteroidBundle<M> {
     }
 }
 
-#[derive(Bundle)]
-pub struct BoxoidBundle {
-    sprite: SpriteBundle,
-    collider: Collider,
-    health: Health,
-}
+// #[derive(Bundle)]
+// pub struct BoxoidBundle {
+//     sprite: SpriteBundle,
+//     collider: Collider,
+//     health: Health,
+// }
 
-impl BoxoidBundle {
-    pub fn new(x: f32, y: f32, half_x: f32, half_y: f32) -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
-                    scale: Vec3::new(half_x * 2., half_y * 2., 0.0),
-                    rotation: *DEFAULT_ROTATION,
-                },
-                sprite: Sprite {
-                    color: Color::ORANGE_RED,
-                    ..default()
-                },
-                ..default()
-            },
-            collider: Collider::cuboid(half_x, half_y),
-            health: Health(1),
-        }
-    }
-}
+// impl BoxoidBundle {
+//     pub fn new(x: f32, y: f32, half_x: f32, half_y: f32) -> Self {
+//         Self {
+//             sprite: SpriteBundle {
+//                 transform: Transform {
+//                     translation: Vec3::new(LEFT_WALL + x, BOTTOM_WALL + y, 0.),
+//                     scale: Vec3::new(half_x * 2., half_y * 2., 0.0),
+//                     rotation: *DEFAULT_ROTATION,
+//                 },
+//                 sprite: Sprite {
+//                     color: Color::ORANGE_RED,
+//                     ..default()
+//                 },
+//                 ..default()
+//             },
+//             collider: Collider::cuboid(half_x, half_y),
+//             health: Health(1),
+//         }
+//     }
+// }
 
-impl Default for BoxoidBundle {
-    fn default() -> Self {
-        Self {
-            sprite: SpriteBundle {
-                transform: Transform {
-                    translation: Vec3::new(
-                        LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
-                        BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
-                        0.,
-                    ),
-                    scale: Vec3::new(50., 50., 0.0),
-                    rotation: *DEFAULT_ROTATION,
-                },
-                ..default()
-            },
-            collider: Collider::cuboid(25., 25.),
-            health: Health(1),
-        }
-    }
-}
+// impl Default for BoxoidBundle {
+//     fn default() -> Self {
+//         Self {
+//             sprite: SpriteBundle {
+//                 transform: Transform {
+//                     translation: Vec3::new(
+//                         LEFT_WALL + (RIGHT_WALL - LEFT_WALL) / 2.,
+//                         BOTTOM_WALL + (TOP_WALL - BOTTOM_WALL) / 2.,
+//                         0.,
+//                     ),
+//                     scale: Vec3::new(50., 50., 0.0),
+//                     rotation: *DEFAULT_ROTATION,
+//                 },
+//                 ..default()
+//             },
+//             collider: Collider::cuboid(25., 25.),
+//             health: Health(1),
+//         }
+//     }
+// }

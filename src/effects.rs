@@ -10,7 +10,7 @@ use bevy_rapier2d::dynamics::Velocity;
 use crate::{
     audio::{
         AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
-        SoulDestroyedSound, VesselDestroyedSound,
+        VesselDestroyedSound,
     },
     avatars::Thrust,
     components::{CollisionRadius, PlayerShipTag},
@@ -210,7 +210,7 @@ pub fn handle_destruction_effects(
 pub fn handle_thrust_effects(
     mut commands: Commands,
     mut evr_thrust_effect: EventReader<ThrustEffectEvent>,
-    mut q_ship_children: Query<&Children, With<PlayerShipTag>>,
+    q_ship_children: Query<&Children, With<PlayerShipTag>>,
     mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
 ) {
     for ThrustEffectEvent {

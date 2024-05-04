@@ -1,14 +1,16 @@
 #![allow(unused)]
 
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
+use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*, window::WindowMode};
 use bevy_particle_systems::ParticleSystemPlugin;
 use bevy_vector_shapes::Shape2dPlugin;
 use fps::{fps_counter_showhide, fps_text_update_system, setup_fps_counter};
+use game::{LOGICAL_HEIGHT, LOGICAL_WIDTH};
 
 mod archetypes;
 mod audio;
 mod avatars;
 mod components;
+mod controls;
 mod effects;
 mod events;
 mod fps;
@@ -16,7 +18,6 @@ mod game;
 mod physics;
 mod play;
 mod utils;
-mod controls;
 
 const BACKGROUND_COLOR: Color = Color::rgb(0., 0., 0.);
 
@@ -24,8 +25,11 @@ fn main() {
     App::new()
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
-                title: "Aion".to_string(),
-                resolution: (1920., 1080.).into(),
+                title: "Aion v0.1.0".to_string(),
+                position: WindowPosition::Centered(MonitorSelection::Index(2)),
+                resolution: (LOGICAL_WIDTH, LOGICAL_HEIGHT).into(),
+                // mode: WindowMode::Fullscreen,
+                // resolution: (LOGICAL_WIDTH * 0.75, LOGICAL_HEIGHT * 0.75).into(),
                 ..default()
             }),
             ..default()

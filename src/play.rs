@@ -1,29 +1,16 @@
-use std::time::Instant;
-
 use bevy::prelude::*;
 use bevy_particle_systems::{
     ColorOverTime, Curve, CurvePoint, EmitterShape, JitteredValue, ParticleSystem,
     ParticleSystemBundle, Playing,
 };
-use bevy_rapier2d::{
-    dynamics::Velocity,
-    geometry::{ActiveEvents, Collider, Sensor},
-    parry::shape::SharedShape,
-};
+use bevy_rapier2d::geometry::Collider;
 use bevy_vector_shapes::{painter::ShapePainter, shapes::LinePainter};
-use noise::{
-    core::perlin::perlin_2d, permutationtable::PermutationTable, utils::PlaneMapBuilder, NoiseFn,
-    Perlin,
-};
+use noise::{NoiseFn, Perlin};
 
 use crate::{
-    archetypes::{AsteroidSizes, ProjectileBundle},
-    audio::ProjectileEmitSound,
+    archetypes::AsteroidSizes,
     avatars::{Asteroid, PlayerShip},
-    components::{
-        DespawnDelay, FireType, PickupTag, PlayerShipTag, ProjectileEmission, ProjectileTag, Score,
-        ScoreboardUi, TurnRate,
-    },
+    components::{DespawnDelay, ProjectileTag, Score, ScoreboardUi},
     controls::{ship_fire, ship_turn, thrust_ship},
     effects::{
         handle_collision_effects, handle_destruction_effects, handle_thrust_effects,
@@ -32,11 +19,9 @@ use crate::{
     events::{CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
     game::{
         despawn_screen, AsteroidMaterialHandles, AsteroidMeshHandles, GameState, OnPlayScreen,
-        ParticlePixelTexture, PlanetGreenTexture, PlanetGreyTexture, PlanetPurpleTexture,
-        PlayerShipMaterialHandle, PlayerShipMeshHandle, PlayerShipTexture, PowerupComplexTexture,
-        PowerupCoreTexture, PowerupSimpleTexture, StarComplexTexture, StarCoreTexture,
-        StarSimpleTexture, WhiteMaterialHandle, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL,
-        SCOREBOARD_FONT_SIZE, SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
+        ParticlePixelTexture, PlayerShipTexture, StarComplexTexture, StarCoreTexture,
+        StarSimpleTexture, BOTTOM_WALL, LABEL_COLOR, LEFT_WALL, RIGHT_WALL, SCOREBOARD_FONT_SIZE,
+        SCOREBOARD_TEXT_PADDING, SCORE_COLOR, TOP_WALL,
     },
     physics::handle_collisions,
     utils::Heading,
@@ -62,7 +47,7 @@ pub fn play_plugin(app: &mut App) {
             (
                 (
                     draw_boundary,
-                    // draw_grid,
+                    draw_grid,
                     handle_collision_effects,
                     handle_destruction_effects,
                     handle_thrust_effects,
@@ -88,21 +73,20 @@ pub fn play_plugin(app: &mut App) {
 // playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
 pub fn setup_play(
     mut commands: Commands,
-    asset_server: Res<AssetServer>,
     asteroid_mesh_handles: Res<AsteroidMeshHandles>,
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_texture: Res<PlayerShipTexture>,
-    white_material_handle: Res<WhiteMaterialHandle>,
+    // white_material_handle: Res<WhiteMaterialHandle>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
-    powerup_core_texture: Res<PowerupCoreTexture>,
-    powerup_simple_texture: Res<PowerupSimpleTexture>,
-    powerup_complex_texture: Res<PowerupComplexTexture>,
+    // powerup_core_texture: Res<PowerupCoreTexture>,
+    // powerup_simple_texture: Res<PowerupSimpleTexture>,
+    // powerup_complex_texture: Res<PowerupComplexTexture>,
     star_core_texture: Res<StarCoreTexture>,
     star_simple_texture: Res<StarSimpleTexture>,
     star_complex_texture: Res<StarComplexTexture>,
-    green_planet_texture: Res<PlanetGreenTexture>,
-    grey_planet_texture: Res<PlanetGreyTexture>,
-    purple_planet_texture: Res<PlanetPurpleTexture>,
+    // green_planet_texture: Res<PlanetGreenTexture>,
+    // grey_planet_texture: Res<PlanetGreyTexture>,
+    // purple_planet_texture: Res<PlanetPurpleTexture>,
 ) {
     PlayerShip::spawn(
         0.,
@@ -112,71 +96,49 @@ pub fn setup_play(
         &particle_pixel_texture,
         &mut commands,
     );
+
+    // highly accessibly asteroid
     Asteroid::spawn(
         AsteroidSizes::Medium,
         5,
         0.,
         100.,
         None,
-        Velocity {
-            linvel: Heading(0.).linvel(0.),
-            angvel: 0.5,
-        },
+        Some(0.),
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
         &mut commands,
     );
 
-    Asteroid::spawn(
-        AsteroidSizes::Medium,
-        5,
-        0.,
-        100.,
-        None,
-        Velocity {
-            linvel: Heading(0.).linvel(0.),
-            angvel: 0.5,
-        },
-        asteroid_mesh_handles.0.clone(),
-        asteroid_material_handles.0.clone(),
-        &mut commands,
-    );
-
-    dev_clashing_asteroids(
+    dev_row_of_clashing_asteroids(
         &mut commands,
         &asteroid_mesh_handles,
         &asteroid_material_handles,
     );
 
     // Diagonal collision, see collision particles
-    // commands
-    //     .spawn(gen_asteroid(
-    //         AsteroidSizes::Medium,
-    //         5,
-    //         asteroid_mesh_handles.0.clone(),
-    //         asteroid_material_handles.0.clone(),
-    //         LEFT_WALL + 50.,
-    //         BOTTOM_WALL + 300.,
-    //         Velocity {
-    //             linvel: Heading(-45.).linvel(20.),
-    //             angvel: 0.,
-    //         },
-    //     ))
-    //     .insert(OnPlayScreen);
-    // commands
-    //     .spawn(gen_asteroid(
-    //         AsteroidSizes::Medium,
-    //         5,
-    //         asteroid_mesh_handles.0.clone(),
-    //         asteroid_material_handles.0.clone(),
-    //         LEFT_WALL + 130.,
-    //         BOTTOM_WALL + 230.,
-    //         Velocity {
-    //             linvel: Heading(135.).linvel(20.),
-    //             angvel: 0.,
-    //         },
-    //     ))
-    //     .insert(OnPlayScreen);
+    Asteroid::spawn(
+        AsteroidSizes::Medium,
+        5,
+        LEFT_WALL + 50.,
+        BOTTOM_WALL + 300.,
+        None,
+        Some(0.),
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        &mut commands,
+    );
+    Asteroid::spawn(
+        AsteroidSizes::Medium,
+        5,
+        LEFT_WALL + 130.,
+        BOTTOM_WALL + 230.,
+        None,
+        Some(0.),
+        asteroid_mesh_handles.0.clone(),
+        asteroid_material_handles.0.clone(),
+        &mut commands,
+    );
 
     commands
         .spawn((
@@ -319,21 +281,20 @@ pub fn press_r_restart_play(keyboard_input: Res<ButtonInput<KeyCode>>) -> bool {
 fn spawn_core_star(
     x: f32,
     y: f32,
-    scale: Option<f32>,
+    energy: Option<f32>,
     color: Option<Color>,
     commands: &mut Commands,
     star_simple_texture: &StarCoreTexture,
 ) {
-    let scale = scale.unwrap_or(1.0);
-    let bg_brightness_constant = 0.2;
+    let energy = energy.unwrap_or(1.0);
     let color = match color {
-        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
-        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+        Some(x) => Color::hsl(x.h(), 0.7 + energy * 0.3, 0.2 + 0.7 * energy),
+        None => Color::hsl(0.0, 0.0, 0.2 + 0.6 * energy),
     };
     commands.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_simple_texture.0.clone(),
-        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 * scale)),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 * energy)),
         ..default()
     },));
 }
@@ -341,21 +302,20 @@ fn spawn_core_star(
 fn spawn_simple_star(
     x: f32,
     y: f32,
-    scale: Option<f32>,
+    energy: Option<f32>,
     color: Option<Color>,
     commands: &mut Commands,
     star_basic_texture: &StarSimpleTexture,
 ) {
-    let scale = scale.unwrap_or(1.0);
-    let bg_brightness_constant = 0.2;
+    let energy = energy.unwrap_or(1.0);
     let color = match color {
-        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
-        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+        Some(x) => Color::hsl(x.h(), 0.7 + energy * 0.3, 0.2 + 0.7 * energy),
+        None => Color::WHITE,
     };
     commands.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_basic_texture.0.clone(),
-        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 + (scale * 0.05))),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 + (energy * 0.05))),
         ..default()
     },));
 }
@@ -363,93 +323,92 @@ fn spawn_simple_star(
 fn spawn_complex_star(
     x: f32,
     y: f32,
-    scale: Option<f32>,
+    energy: Option<f32>,
     color: Option<Color>,
     commands: &mut Commands,
     star_complex_texture: &StarComplexTexture,
 ) {
-    let scale = scale.unwrap_or(1.0);
-    let bg_brightness_constant = 0.2;
+    let energy = energy.unwrap_or(1.0);
     let color = match color {
-        Some(x) => Color::rgba(x.r(), x.g(), x.b(), bg_brightness_constant),
-        None => Color::rgba(1., 1., 1., bg_brightness_constant),
+        Some(x) => Color::hsl(x.h(), 0.4 + energy * 0.3, 0.2 + 0.7 * energy),
+        None => Color::WHITE,
     };
     commands.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_complex_texture.0.clone(),
-        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.04 + (scale * 0.09))),
+        transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.04 + (energy * 0.09))),
         ..default()
     },));
 }
 
-fn spawn_core_powerup(
-    x: f32,
-    y: f32,
-    commands: &mut Commands,
-    powerup_core_texture: &PowerupCoreTexture,
-) {
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_core_texture.0.clone(),
-            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(20.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-}
+// fn spawn_core_powerup(
+//     x: f32,
+//     y: f32,
+//     commands: &mut Commands,
+//     powerup_core_texture: &PowerupCoreTexture,
+// ) {
+//     commands.spawn((
+//         SpriteBundle {
+//             sprite: Sprite {
+//                 color: Color::WHITE,
+//                 ..default()
+//             },
+//             texture: powerup_core_texture.0.clone(),
+//             transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+//             ..default()
+//         },
+//         Collider::from(SharedShape::ball(20.)),
+//         Sensor,
+//         PickupTag,
+//         ActiveEvents::COLLISION_EVENTS,
+//     ));
+// }
 
-fn spawn_simple_powerup(
-    x: f32,
-    y: f32,
-    commands: &mut Commands,
-    powerup_simple_texture: &PowerupSimpleTexture,
-) {
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_simple_texture.0.clone(),
-            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(20.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-}
+// fn spawn_simple_powerup(
+//     x: f32,
+//     y: f32,
+//     commands: &mut Commands,
+//     powerup_simple_texture: &PowerupSimpleTexture,
+// ) {
+//     commands.spawn((
+//         SpriteBundle {
+//             sprite: Sprite {
+//                 color: Color::WHITE,
+//                 ..default()
+//             },
+//             texture: powerup_simple_texture.0.clone(),
+//             transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+//             ..default()
+//         },
+//         Collider::from(SharedShape::ball(20.)),
+//         Sensor,
+//         PickupTag,
+//         ActiveEvents::COLLISION_EVENTS,
+//     ));
+// }
 
-fn spawn_complex_powerup(
-    x: f32,
-    y: f32,
-    commands: &mut Commands,
-    powerup_complex_texture: &PowerupComplexTexture,
-) {
-    commands.spawn((
-        SpriteBundle {
-            sprite: Sprite {
-                color: Color::WHITE,
-                ..default()
-            },
-            texture: powerup_complex_texture.0.clone(),
-            transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
-            ..default()
-        },
-        Collider::from(SharedShape::ball(20.)),
-        Sensor,
-        PickupTag,
-        ActiveEvents::COLLISION_EVENTS,
-    ));
-}
+// fn spawn_complex_powerup(
+//     x: f32,
+//     y: f32,
+//     commands: &mut Commands,
+//     powerup_complex_texture: &PowerupComplexTexture,
+// ) {
+//     commands.spawn((
+//         SpriteBundle {
+//             sprite: Sprite {
+//                 color: Color::WHITE,
+//                 ..default()
+//             },
+//             texture: powerup_complex_texture.0.clone(),
+//             transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.8)),
+//             ..default()
+//         },
+//         Collider::from(SharedShape::ball(20.)),
+//         Sensor,
+//         PickupTag,
+//         ActiveEvents::COLLISION_EVENTS,
+//     ));
+// }
 
 fn spawn_cosmic_wind(
     x: f32,
@@ -494,13 +453,7 @@ fn spawn_cosmic_wind(
         .insert(OnPlayScreen);
 }
 
-fn print_ship_heading(mut query: Query<&Transform, With<PlayerShipTag>>) {
-    for transform in query.iter() {
-        let heading = Heading::from(transform.rotation);
-    }
-}
-
-fn dev_clashing_asteroids(
+fn dev_row_of_clashing_asteroids(
     commands: &mut Commands,
     asteroid_mesh_handles: &AsteroidMeshHandles,
     asteroid_material_handles: &AsteroidMaterialHandles,
@@ -523,11 +476,8 @@ fn dev_clashing_asteroids(
             5,
             start_x + (dx * i as f32),
             y,
-            None,
-            Velocity {
-                linvel: Heading(-90.).linvel(20.),
-                angvel: 0.,
-            },
+            Some(Heading(-90.)),
+            Some(20.),
             asteroid_mesh_handles.0.clone(),
             asteroid_material_handles.0.clone(),
             commands,
@@ -537,11 +487,8 @@ fn dev_clashing_asteroids(
             5,
             start_x + (dx * i as f32),
             y - separation_y,
-            None,
-            Velocity {
-                linvel: Heading(90.).linvel(20.),
-                angvel: 0.,
-            },
+            Some(Heading(90.)),
+            Some(20.),
             asteroid_mesh_handles.0.clone(),
             asteroid_material_handles.0.clone(),
             commands,
@@ -556,19 +503,19 @@ fn spawn_cosmic_background(
     star_complex_texture: &StarComplexTexture,
 ) {
     let noise = Perlin::new(0);
-    let width = (RIGHT_WALL - LEFT_WALL);
-    let height = (TOP_WALL - BOTTOM_WALL);
+    let width = RIGHT_WALL - LEFT_WALL;
+    let height = TOP_WALL - BOTTOM_WALL;
     let step = 50; // simple density
     let density_core = 0.2;
     let density_simple = 0.06;
     let density_complex = 0.01;
     for y in (0..height as i32).step_by(step) {
         for x in (0..width as i32).step_by(step) {
-            let bright = noise.get([
+            let energy = noise.get([
                 x as f64 / (0.1 * width as f64),  // / (width as f64 * 10000.),
                 y as f64 / (0.1 * height as f64), // / (height as f64 * 10000.),
             ]);
-            let bright = ((bright + 1.0) / 2.0) as f32;
+            let energy = ((energy + 1.0) / 2.0) as f32;
 
             let dx = (noise.get([
                 x as f64 / (0.2 * width as f64),
@@ -592,41 +539,45 @@ fn spawn_cosmic_background(
                 spawn_core_star(
                     x as f32 - (width / 2.) + dx,
                     y as f32 - (height / 2.) + dy,
-                    Some(bright),
+                    Some(energy),
                     None,
                     &mut commands,
                     &star_core_texture,
                 );
             } else if rand::random::<f32>() > (1. - density_simple) {
                 let rng = rand::random::<f32>();
-                let color = if rng < 0.1 {
-                    Color::RED
-                } else if rng < 0.2 {
-                    Color::BLUE
+                let color = if rng < 0.4 {
+                    Some(Color::hsl(250., 0.0, 0.0))
+                } else if rng < 0.8 {
+                    Some(Color::hsl(280., 0.0, 0.0))
                 } else {
-                    Color::WHITE
+                    None
                 };
                 spawn_simple_star(
                     x as f32 - (width / 2.) + dx,
                     y as f32 - (height / 2.) + dy,
-                    Some(bright),
-                    Some(color),
+                    Some(energy),
+                    color,
                     &mut commands,
                     &star_simple_texture,
                 );
             } else if rand::random::<f32>() > (1. - density_complex) {
                 let rng = rand::random::<f32>();
-                let color = if rng < 0.1 {
-                    Color::VIOLET
-                } else if rng < 0.2 {
-                    Color::AQUAMARINE
+                let color = if rng < 0.2 {
+                    Color::hsl(55., 0., 0.)
+                } else if rng < 0.4 {
+                    Color::hsl(220., 0., 0.)
+                } else if rng < 0.6 {
+                    Color::hsl(320., 0., 0.3)
+                } else if rng < 0.8 {
+                    Color::hsl(0., 0., 0.)
                 } else {
                     Color::WHITE
                 };
                 spawn_complex_star(
                     x as f32 - (width / 2.) + dx,
                     y as f32 - (height / 2.) + dy,
-                    Some(bright),
+                    Some(energy),
                     Some(color),
                     &mut commands,
                     &star_complex_texture,

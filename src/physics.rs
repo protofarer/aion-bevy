@@ -1,26 +1,15 @@
-use std::{f32::consts::PI, time::Duration};
+use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_particle_systems::{
-    CircleSegment, ColorOverTime, Curve, CurvePoint, JitteredValue, Lerp, ParticleBurst,
-    ParticleSystem, ParticleSystemBundle, Playing, ValueOverTime,
-};
 use bevy_rapier2d::prelude::*;
 
 use crate::{
-    audio::{
-        AsteroidClashSound, AsteroidDestroyedSound, ProjectileImpactSound, ShipDamagedSound,
-        ShipThrustSound, ShipThrustSoundStopwatch, SoulDestroyedSound,
-    },
-    avatars::Thrust,
     components::{
         AsteroidTag, CollisionRadius, Damage, DespawnDelay, Health, PlayerShipTag, ProjectileTag,
         Score,
     },
-    effects::{CollisionEffectEvent, DestructionEffectEvent, ThrustEffectEvent},
-    events::{Avatars, CollisionAsteroidAsteroidEvent, CollisionProjectileEvent},
-    game::ParticlePixelTexture,
-    utils::Heading,
+    effects::{CollisionEffectEvent, DestructionEffectEvent},
+    events::Avatars,
 };
 
 // TODO
@@ -78,7 +67,7 @@ pub fn handle_collisions(
                 let is_any_ship = ship_a || ship_b;
 
                 // PROJ Collision Effect ONLY (not incl damage)
-                if let Some((id, damage, transform, velocity)) = any_proj {
+                if let Some((id, _damage, transform, velocity)) = any_proj {
                     evw_effects_collisions.send(CollisionEffectEvent {
                         avatar_a: Avatars::Projectile,
                         ent_a: Some(id),
@@ -167,7 +156,7 @@ pub fn handle_collisions(
                     } else {
                         q_ship.get_mut(*ent_b).unwrap()
                     };
-                    let (aster_id, _, aster_dmg, _, _) = any_aster.unwrap();
+                    let (_aster_id, _, aster_dmg, _, _) = any_aster.unwrap();
 
                     **ship_health -= **aster_dmg;
 

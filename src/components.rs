@@ -18,9 +18,6 @@ pub struct AsteroidTag;
 #[derive(Component)]
 pub struct PlayerShipTag;
 
-#[derive(Component)]
-pub struct PickupTag;
-
 // DATA
 
 #[derive(Component)]

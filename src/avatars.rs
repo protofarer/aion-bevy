@@ -13,9 +13,9 @@ use crate::{
         FireType, Health, PlayerShipTag, PrimaryThrustMagnitude, ProjectileEmission, TurnRate,
     },
     game::{
-        OnPlayScreen, ParticlePixelTexture, PlayerShipTexture,
+        OnPlayScreen, ParticlePixelTexture, PlayerShipTexture, Speed,
         AMBIENT_ANGULAR_FRICTION_COEFFICIENT, AMBIENT_LINEAR_FRICTION_COEFFICIENT,
-        DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH, INIT_SHIP_RESTITUTION,
+        DEFAULT_MOVESPEED, DEFAULT_THRUST_FORCE_MAGNITUDE, INIT_SHIP_HEALTH, INIT_SHIP_RESTITUTION,
         INIT_SHIP_TURN_RATE, LARGE_ASTEROID_HEALTH, LARGE_ASTEROID_R, MEDIUM_ASTEROID_HEALTH,
         MEDIUM_ASTEROID_R, SHIP_HALF_WIDTH, SHIP_LENGTH_AFT, SHIP_LENGTH_FORE,
         SHIP_THRUST_FORCE_MAGNITUDE, SMALL_ASTEROID_HEALTH, SMALL_ASTEROID_R,
@@ -260,7 +260,7 @@ impl Asteroid {
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        velocity: Velocity,
+        speed: Option<Speed>,
         mesh_handles: Vec<Handle<Mesh>>,
         material_handles: Vec<Handle<ColorMaterial>>,
     ) -> AsteroidBundle<ColorMaterial> {
@@ -268,6 +268,13 @@ impl Asteroid {
             AsteroidSizes::Small => SMALL_ASTEROID_R,
             AsteroidSizes::Medium => MEDIUM_ASTEROID_R,
             AsteroidSizes::Large => LARGE_ASTEROID_R,
+        };
+        let heading = heading.unwrap_or_default();
+        let speed = speed.unwrap_or(DEFAULT_MOVESPEED);
+        let angvel = rand::random::<f32>() * 0.5 - 0.25;
+        let velocity = Velocity {
+            linvel: heading.linvel(speed),
+            angvel,
         };
         let (handle_mesh, health) = match r {
             SMALL_ASTEROID_R => (
@@ -316,7 +323,7 @@ impl Asteroid {
         x: f32,
         y: f32,
         heading: Option<Heading>,
-        velocity: Velocity,
+        speed: Option<Speed>,
         mesh_handles: Vec<Handle<Mesh>>,
         material_handles: Vec<Handle<ColorMaterial>>,
         commands: &mut Commands,
@@ -328,7 +335,7 @@ impl Asteroid {
                 x,
                 y,
                 heading,
-                velocity,
+                speed,
                 mesh_handles,
                 material_handles,
             ))
