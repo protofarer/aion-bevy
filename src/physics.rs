@@ -20,7 +20,7 @@ use crate::{
 // destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
 // asteroid_clash_sound: Res<AsteroidClashSound>,
 pub fn handle_collisions(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut evr_collisions: EventReader<CollisionEvent>,
     mut evw_effects_collisions: EventWriter<CollisionEffectEvent>,
     mut evw_effects_destruction: EventWriter<DestructionEffectEvent>,
@@ -76,7 +76,7 @@ pub fn handle_collisions(
                         collision_radius_a: None,
                         ..default()
                     });
-                    commands.entity(id).insert(DespawnDelay(Timer::new(
+                    cmd.entity(id).insert(DespawnDelay(Timer::new(
                         Duration::from_secs_f32(2.0),
                         TimerMode::Once,
                     )));
@@ -101,7 +101,7 @@ pub fn handle_collisions(
                             avatar: Avatars::Asteroid,
                             transform: *aster_transform,
                         });
-                        commands.entity(aster_id).despawn_recursive();
+                        cmd.entity(aster_id).despawn_recursive();
                     }
                 }
 
@@ -122,7 +122,7 @@ pub fn handle_collisions(
                             avatar: Avatars::PlayerShip,
                             transform: *ship_transform,
                         });
-                        commands.entity(ship_id).despawn_recursive();
+                        cmd.entity(ship_id).despawn_recursive();
                     } else {
                         evw_effects_collisions.send(CollisionEffectEvent {
                             avatar_a: Avatars::PlayerShip,
@@ -165,7 +165,7 @@ pub fn handle_collisions(
                             avatar: Avatars::PlayerShip,
                             transform: *ship_transform,
                         });
-                        commands.entity(ship_id).despawn_recursive();
+                        cmd.entity(ship_id).despawn_recursive();
                     } else {
                         evw_effects_collisions.send(CollisionEffectEvent {
                             avatar_a: Avatars::PlayerShip,

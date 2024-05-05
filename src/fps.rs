@@ -2,6 +2,8 @@ use bevy::diagnostic::DiagnosticsStore;
 use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 
+use crate::OnDebugDisplay;
+
 /// Marker to find the container entity so we can show/hide the FPS counter
 #[derive(Component)]
 pub struct FpsRoot;
@@ -16,6 +18,7 @@ pub fn setup_fps_counter(mut commands: Commands) {
     let root = commands
         .spawn((
             FpsRoot,
+            OnDebugDisplay,
             NodeBundle {
                 // give it a dark background for readability
                 background_color: BackgroundColor(Color::BLACK.with_a(0.5)),
@@ -50,8 +53,8 @@ pub fn setup_fps_counter(mut commands: Commands) {
                     TextSection {
                         value: "FPS: ".into(),
                         style: TextStyle {
-                            font_size: 16.0,
-                            color: Color::WHITE,
+                            font_size: 20.0,
+                            color: Color::LIME_GREEN,
                             // if you want to use your game's font asset,
                             // uncomment this and provide the handle:
                             // font: my_font_handle
@@ -61,7 +64,7 @@ pub fn setup_fps_counter(mut commands: Commands) {
                     TextSection {
                         value: " N/A".into(),
                         style: TextStyle {
-                            font_size: 16.0,
+                            font_size: 20.0,
                             color: Color::WHITE,
                             // if you want to use your game's font asset,
                             // uncomment this and provide the handle:

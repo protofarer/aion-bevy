@@ -1,4 +1,5 @@
 use bevy::render::camera::{ScalingMode, Viewport};
+use bevy_vector_shapes::painter::ShapePainter;
 use lazy_static::lazy_static;
 
 use bevy::prelude::*;
@@ -104,7 +105,7 @@ pub fn setup_menu(
 }
 
 pub fn load_assets(
-    mut commands: Commands,
+    mut cmd: Commands,
     asset_server: Res<AssetServer>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
@@ -117,9 +118,9 @@ pub fn load_assets(
     //     max_width: 1920.,
     //     max_height: 1080.,
     // };
-    let camera = commands.spawn(camera_bundle);
+    let camera = cmd.spawn(camera_bundle);
 
-    commands.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
+    cmd.insert_resource(ShipThrustSoundStopwatch(Stopwatch::new()));
 
     // let handle_playership_mesh = meshes.add(Triangle2d::new(
     //     Vec2::new(-SHIP_HALF_WIDTH, -SHIP_HALF_WIDTH),
@@ -142,32 +143,32 @@ pub fn load_assets(
     // let destroy_soul_sound = asset_server.load("sounds/human_death.wav");
     // commands.insert_resource(SoulDestroyedSound(destroy_soul_sound));
 
-    let light_shot_sound = asset_server.load("sounds/light_shot.wav");
-    commands.insert_resource(ProjectileEmitSound(light_shot_sound));
+    let light_shot_sound = asset_server.load("sounds/proj_core.wav");
+    cmd.insert_resource(ProjectileEmitSound(light_shot_sound));
 
-    let ship_thrust_sound = asset_server.load("sounds/thrust.wav");
-    commands.insert_resource(ShipThrustSound(ship_thrust_sound));
+    let ship_thrust_sound = asset_server.load("sounds/thrust-med.wav");
+    cmd.insert_resource(ShipThrustSound(ship_thrust_sound));
 
     let projectile_impact_sound = asset_server.load("sounds/scratch.wav");
-    commands.insert_resource(ProjectileImpactSound(projectile_impact_sound));
+    cmd.insert_resource(ProjectileImpactSound(projectile_impact_sound));
 
     let destroy_asteroid_sound = asset_server.load("sounds/destroy_asteroid.wav");
-    commands.insert_resource(AsteroidDestroyedSound(destroy_asteroid_sound));
+    cmd.insert_resource(AsteroidDestroyedSound(destroy_asteroid_sound));
 
     let damage_ship_sound = asset_server.load("sounds/damage_ship.wav");
-    commands.insert_resource(ShipDamagedSound(damage_ship_sound));
+    cmd.insert_resource(ShipDamagedSound(damage_ship_sound));
 
     let destroy_vessel_sound = asset_server.load("sounds/physical_death.wav");
-    commands.insert_resource(VesselDestroyedSound(destroy_vessel_sound));
+    cmd.insert_resource(VesselDestroyedSound(destroy_vessel_sound));
 
     let asteroid_clash_sound = asset_server.load("sounds/asteroid_clash.wav");
-    commands.insert_resource(AsteroidClashSound(asteroid_clash_sound));
+    cmd.insert_resource(AsteroidClashSound(asteroid_clash_sound));
 
     let handle_white_colormaterial = materials.add(Color::WHITE);
-    commands.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));
+    cmd.insert_resource(WhiteMaterialHandle(handle_white_colormaterial));
 
     let asteroid_material = materials.add(Color::hsl(0.0, 0.0, 0.5));
-    commands.insert_resource(AsteroidMaterialHandles(vec![asteroid_material]));
+    cmd.insert_resource(AsteroidMaterialHandles(vec![asteroid_material]));
 
     let mut asteroid_mesh_handles = vec![];
     for n_sides in [5, 6, 8] {
@@ -177,34 +178,34 @@ pub fn load_assets(
             // ???
         }
     }
-    commands.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
+    cmd.insert_resource(AsteroidMeshHandles(asteroid_mesh_handles));
 
     let playership_texture = asset_server.load("images/ship_K.png").into();
-    commands.insert_resource(PlayerShipTexture(playership_texture));
+    cmd.insert_resource(PlayerShipTexture(playership_texture));
 
     let particle_pixel_texture = asset_server.load("images/px.png").into();
-    commands.insert_resource(ParticlePixelTexture(particle_pixel_texture));
+    cmd.insert_resource(ParticlePixelTexture(particle_pixel_texture));
 
     let powerup_core_texture = asset_server.load("images/enemy_A.png").into();
-    commands.insert_resource(PowerupCoreTexture(powerup_core_texture));
+    cmd.insert_resource(PowerupCoreTexture(powerup_core_texture));
     let powerup_simple_texture = asset_server.load("images/enemy_C.png").into();
-    commands.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
+    cmd.insert_resource(PowerupSimpleTexture(powerup_simple_texture));
     let powerup_complex_texture = asset_server.load("images/enemy_E.png").into();
-    commands.insert_resource(PowerupComplexTexture(powerup_complex_texture));
+    cmd.insert_resource(PowerupComplexTexture(powerup_complex_texture));
 
     let star_core_texture = asset_server.load("images/star_06.png").into();
-    commands.insert_resource(StarCoreTexture(star_core_texture));
+    cmd.insert_resource(StarCoreTexture(star_core_texture));
     let star_simple_texture = asset_server.load("images/star_04.png").into();
-    commands.insert_resource(StarSimpleTexture(star_simple_texture));
+    cmd.insert_resource(StarSimpleTexture(star_simple_texture));
     let star_complex_texture = asset_server.load("images/star_08.png").into();
-    commands.insert_resource(StarComplexTexture(star_complex_texture));
+    cmd.insert_resource(StarComplexTexture(star_complex_texture));
 
     let green_planet_texture = asset_server.load("images/planet00.png").into();
-    commands.insert_resource(PlanetGreenTexture(green_planet_texture));
+    cmd.insert_resource(PlanetGreenTexture(green_planet_texture));
     let grey_planet_texture = asset_server.load("images/planet04.png").into();
-    commands.insert_resource(PlanetGreyTexture(grey_planet_texture));
+    cmd.insert_resource(PlanetGreyTexture(grey_planet_texture));
     let purple_planet_texture = asset_server.load("images/planet09.png").into();
-    commands.insert_resource(PlanetPurpleTexture(purple_planet_texture));
+    cmd.insert_resource(PlanetPurpleTexture(purple_planet_texture));
 }
 
 #[derive(States, Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -285,9 +286,9 @@ pub struct Textures {
     pub star_complex: Handle<Image>,
 }
 
-pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut commands: Commands) {
+pub fn despawn_screen<T: Component>(to_despawn: Query<Entity, With<T>>, mut cmd: Commands) {
     for entity in to_despawn.iter() {
         // println!("despawning entity {:?}", entity);
-        commands.entity(entity).despawn_recursive();
+        cmd.entity(entity).despawn_recursive();
     }
 }

@@ -41,7 +41,7 @@ pub fn ship_turn(
 }
 
 pub fn ship_fire(
-    mut commands: Commands,
+    mut cmd: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut q_ship: Query<&Children, With<PlayerShipTag>>,
     mut q_emitter: Query<(&GlobalTransform, &mut ProjectileEmission, &FireType)>,
@@ -64,7 +64,7 @@ pub fn ship_fire(
                                 let (_scale, rotation, translation) =
                                     global_transform.to_scale_rotation_translation();
 
-                                commands
+                                cmd
                                     .spawn(ProjectileBundle::new(
                                         translation.x,
                                         translation.y,
@@ -77,7 +77,7 @@ pub fn ship_fire(
                                         Some(2.0),
                                     ))
                                     .insert(OnPlayScreen);
-                                commands.spawn(AudioBundle {
+                                cmd.spawn(AudioBundle {
                                     source: fire_sound.0.clone(),
                                     ..default()
                                 });
@@ -92,7 +92,7 @@ pub fn ship_fire(
 }
 
 pub fn thrust_ship(
-    mut commands: Commands,
+    mut cmd: Commands,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut evw_thrust_effect: EventWriter<ThrustEffectEvent>,
     mut q_ship: Query<(Entity, &Children, &mut ExternalForce, &Transform), With<PlayerShipTag>>,
@@ -121,14 +121,14 @@ pub fn thrust_ship(
 
             if thrust_sound_stopwatch.0.elapsed() >= Duration::from_secs_f32(0.3) {
                 thrust_sound_stopwatch.0.reset();
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: thrust_sound.0.clone(),
                     ..default()
                 });
             }
         }
         if keyboard_input.just_pressed(KeyCode::KeyS) {
-            commands.spawn(AudioBundle {
+            cmd.spawn(AudioBundle {
                 source: thrust_sound.0.clone(),
                 ..default()
             });

@@ -115,10 +115,10 @@ impl PlayerShip {
         heading: Option<Heading>,
         texture: &PlayerShipTexture,
         particle_pixel_texture: &ParticlePixelTexture,
-        commands: &mut Commands,
+        cmd: &mut Commands,
     ) {
         let (ship, children) = PlayerShip::new(x, y, heading, texture, particle_pixel_texture);
-        commands
+        cmd
             .spawn(ship)
             .with_children(|parent| {
                 parent.spawn(children.0);
@@ -326,9 +326,9 @@ impl Asteroid {
         speed: Option<Speed>,
         mesh_handles: Vec<Handle<Mesh>>,
         material_handles: Vec<Handle<ColorMaterial>>,
-        commands: &mut Commands,
+        cmd: &mut Commands,
     ) {
-        commands
+        cmd
             .spawn(Asteroid::new(
                 size,
                 n_sides,

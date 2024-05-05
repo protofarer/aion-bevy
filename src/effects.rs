@@ -64,7 +64,7 @@ pub struct ThrustEffectEvent {
 }
 
 pub fn handle_collision_effects(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut evr_coll_effects: EventReader<CollisionEffectEvent>,
     particle_pixel_texture: Res<ParticlePixelTexture>,
     proj_coll_sound: Res<ProjectileImpactSound>,
@@ -76,23 +76,23 @@ pub fn handle_collision_effects(
             Avatars::Projectile => {
                 // play sound, emit particles
                 emit_projectile_collision_particles(
-                    &mut commands,
+                    &mut cmd,
                     &particle_pixel_texture,
                     &event.transform_a.unwrap_or_default(),
                     &event.velocity_a.unwrap_or_default(),
                 );
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: proj_coll_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
             }
             Avatars::PlayerShip => {
                 emit_ship_collision_particles(
-                    &mut commands,
+                    &mut cmd,
                     &event.transform_a.unwrap_or_default(),
                     &particle_pixel_texture,
                 );
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: damage_ship_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
@@ -101,12 +101,12 @@ pub fn handle_collision_effects(
                 match event.avatar_b {
                     Some(Avatars::Asteroid) => {
                         // emit clash parts
-                        commands.spawn(AudioBundle {
+                        cmd.spawn(AudioBundle {
                             source: asteroid_clash_sound.0.clone(),
                             settings: PlaybackSettings::DESPAWN,
                         });
                         emit_asteroid_w_asteroid_collision_particles(
-                            &mut commands,
+                            &mut cmd,
                             &particle_pixel_texture,
                             &event.transform_a.unwrap(),
                             &event.collision_radius_a.unwrap(),
@@ -124,13 +124,13 @@ pub fn handle_collision_effects(
 }
 
 fn emit_projectile_collision_particles(
-    commands: &mut Commands,
+    cmd: &mut Commands,
     particle_pixel_texture: &Res<ParticlePixelTexture>,
     transform: &Transform,
     velocity: &Velocity,
 ) {
     let direction_angle = Vec2::from_angle(PI).rotate(velocity.linvel).to_angle();
-    commands
+    cmd
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 6,
@@ -167,7 +167,7 @@ fn emit_projectile_collision_particles(
 }
 
 pub fn handle_destruction_effects(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut ev_w: EventReader<DestructionEffectEvent>,
     destroy_asteroid_sound: Res<AsteroidDestroyedSound>,
     destroy_vessel_sound: Res<VesselDestroyedSound>,
@@ -182,22 +182,22 @@ pub fn handle_destruction_effects(
                 //     source: destroy_soul_sound.0.clone(),
                 //     settings: PlaybackSettings::DESPAWN,
                 // });
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: destroy_vessel_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: damage_ship_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
                 emit_ship_destruction_particles(
-                    &mut commands,
+                    &mut cmd,
                     &event.transform,
                     &particle_pixel_texture,
                 );
             }
             Avatars::Asteroid => {
-                commands.spawn(AudioBundle {
+                cmd.spawn(AudioBundle {
                     source: destroy_asteroid_sound.0.clone(),
                     settings: PlaybackSettings::DESPAWN,
                 });
@@ -208,7 +208,7 @@ pub fn handle_destruction_effects(
 }
 
 pub fn handle_thrust_effects(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut evr_thrust_effect: EventReader<ThrustEffectEvent>,
     q_ship_children: Query<&Children, With<PlayerShipTag>>,
     mut q_particle_system: Query<Entity, (With<Thrust>, With<ParticleSystem>)>,
@@ -222,9 +222,9 @@ pub fn handle_thrust_effects(
             for child in children.iter() {
                 if let Ok(ent_id) = q_particle_system.get_mut(*child) {
                     if *is_thrusting {
-                        commands.entity(ent_id).insert(Playing);
+                        cmd.entity(ent_id).insert(Playing);
                     } else {
-                        commands.entity(ent_id).remove::<Playing>();
+                        cmd.entity(ent_id).remove::<Playing>();
                     }
                 }
             }
@@ -270,7 +270,7 @@ pub fn handle_thrust_effects(
 // }
 
 fn emit_asteroid_w_asteroid_collision_particles(
-    commands: &mut Commands,
+    cmd: &mut Commands,
     particle_pixel_texture: &ParticlePixelTexture,
     transform_a: &Transform,
     r_a: &CollisionRadius,
@@ -281,7 +281,7 @@ fn emit_asteroid_w_asteroid_collision_particles(
     let neg_perpendicular = Vec2::new(normalized.x, normalized.y).to_angle() - PI / 2.0;
     let collision_pt = transform_a.translation + normalized * r_a.0;
 
-    commands
+    cmd
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 200,
@@ -314,7 +314,7 @@ fn emit_asteroid_w_asteroid_collision_particles(
             ..ParticleSystemBundle::default()
         })
         .insert(Playing);
-    commands
+    cmd
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 200,
@@ -350,11 +350,11 @@ fn emit_asteroid_w_asteroid_collision_particles(
 }
 
 fn emit_ship_collision_particles(
-    commands: &mut Commands,
+    cmd: &mut Commands,
     transform: &Transform,
     particle_pixel_texture: &ParticlePixelTexture,
 ) {
-    commands
+    cmd
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: 25,
@@ -382,7 +382,7 @@ fn emit_ship_collision_particles(
 }
 
 fn emit_ship_destruction_particles(
-    commands: &mut Commands,
+    cmd: &mut Commands,
     transform: &Transform,
     particle_pixel_texture: &ParticlePixelTexture,
 ) {
@@ -391,7 +391,7 @@ fn emit_ship_destruction_particles(
     let n_burst = 200;
     let rate = 150.0;
     let duration = 6.0;
-    commands
+    cmd
         .spawn(ParticleSystemBundle {
             particle_system: ParticleSystem {
                 max_particles: n_particles,

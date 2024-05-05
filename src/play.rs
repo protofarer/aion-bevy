@@ -47,7 +47,6 @@ pub fn play_plugin(app: &mut App) {
             (
                 (
                     draw_boundary,
-                    draw_grid,
                     handle_collision_effects,
                     handle_destruction_effects,
                     handle_thrust_effects,
@@ -72,7 +71,7 @@ pub fn play_plugin(app: &mut App) {
 // playership_mesh_handle: Res<PlayerShipMeshHandle>,
 // playership_material_handle: Res<PlayerShipMaterialHandle>, // bg_music: Res<BackgroundMusic>,
 pub fn setup_play(
-    mut commands: Commands,
+    mut cmd: Commands,
     asteroid_mesh_handles: Res<AsteroidMeshHandles>,
     asteroid_material_handles: Res<AsteroidMaterialHandles>,
     playership_texture: Res<PlayerShipTexture>,
@@ -94,7 +93,7 @@ pub fn setup_play(
         None,
         &playership_texture,
         &particle_pixel_texture,
-        &mut commands,
+        &mut cmd,
     );
 
     // highly accessibly asteroid
@@ -107,11 +106,11 @@ pub fn setup_play(
         Some(0.),
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
-        &mut commands,
+        &mut cmd,
     );
 
     dev_row_of_clashing_asteroids(
-        &mut commands,
+        &mut cmd,
         &asteroid_mesh_handles,
         &asteroid_material_handles,
     );
@@ -126,7 +125,7 @@ pub fn setup_play(
         Some(0.),
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
-        &mut commands,
+        &mut cmd,
     );
     Asteroid::spawn(
         AsteroidSizes::Medium,
@@ -137,10 +136,10 @@ pub fn setup_play(
         Some(0.),
         asteroid_mesh_handles.0.clone(),
         asteroid_material_handles.0.clone(),
-        &mut commands,
+        &mut cmd,
     );
 
-    commands
+    cmd
         .spawn((
             ScoreboardUi,
             TextBundle::from_sections([
@@ -168,12 +167,12 @@ pub fn setup_play(
         .insert(OnPlayScreen);
 
     spawn_cosmic_background(
-        &mut commands,
+        &mut cmd,
         &star_core_texture,
         &star_simple_texture,
         &star_complex_texture,
     );
-    spawn_cosmic_wind(300., -400., None, &mut commands, &particle_pixel_texture);
+    spawn_cosmic_wind(300., -400., None, &mut cmd, &particle_pixel_texture);
 
     // Simple powerup, large and easy to get
     // spawn_core_powerup(-200., 0., &mut commands, &powerup_core_texture);
@@ -207,38 +206,6 @@ pub fn draw_boundary(mut painter: ShapePainter) {
     );
 }
 
-pub fn draw_grid(mut painter: ShapePainter) {
-    let height = TOP_WALL - BOTTOM_WALL;
-    let width = RIGHT_WALL - LEFT_WALL;
-    let line_color = Color::rgba(1., 1., 1., 0.025);
-
-    painter.thickness = 1.;
-    painter.color = line_color;
-
-    let s = 100;
-
-    for x in (0..(width / 2.0) as usize).step_by(s) {
-        painter.line(
-            Vec3::new(x as f32, -height / 2., 0.),
-            Vec3::new(x as f32, height / 2., 0.),
-        );
-        painter.line(
-            Vec3::new(-(x as f32), -height / 2., 0.),
-            Vec3::new(-(x as f32), height / 2., 0.),
-        );
-    }
-    for y in (0..(height / 2.0) as usize).step_by(s) {
-        painter.line(
-            Vec3::new(-width / 2., y as f32, 0.),
-            Vec3::new(width / 2., y as f32, 0.),
-        );
-        painter.line(
-            Vec3::new(-width / 2., -(y as f32), 0.),
-            Vec3::new(width / 2., -(y as f32), 0.),
-        );
-    }
-}
-
 pub fn wraparound(mut query: Query<&mut Transform, With<Collider>>) {
     for mut transform in query.iter_mut() {
         if transform.translation.y >= TOP_WALL {
@@ -263,13 +230,13 @@ pub fn update_scoreboard(scoreboard: Res<Score>, mut query: Query<&mut Text, Wit
 }
 
 pub fn despawn_delay(
-    mut commands: Commands,
+    mut cmd: Commands,
     mut query: Query<(Entity, &mut DespawnDelay), With<ProjectileTag>>,
     time: Res<Time>,
 ) {
     for (entity, mut despawn_delay) in &mut query {
         if despawn_delay.tick(time.delta()).just_finished() {
-            commands.entity(entity).despawn();
+            cmd.entity(entity).despawn();
         }
     }
 }
@@ -283,7 +250,7 @@ fn spawn_core_star(
     y: f32,
     energy: Option<f32>,
     color: Option<Color>,
-    commands: &mut Commands,
+    cmd: &mut Commands,
     star_simple_texture: &StarCoreTexture,
 ) {
     let energy = energy.unwrap_or(1.0);
@@ -291,7 +258,7 @@ fn spawn_core_star(
         Some(x) => Color::hsl(x.h(), 0.7 + energy * 0.3, 0.2 + 0.7 * energy),
         None => Color::hsl(0.0, 0.0, 0.2 + 0.6 * energy),
     };
-    commands.spawn((SpriteBundle {
+    cmd.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_simple_texture.0.clone(),
         transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 * energy)),
@@ -304,7 +271,7 @@ fn spawn_simple_star(
     y: f32,
     energy: Option<f32>,
     color: Option<Color>,
-    commands: &mut Commands,
+    cmd: &mut Commands,
     star_basic_texture: &StarSimpleTexture,
 ) {
     let energy = energy.unwrap_or(1.0);
@@ -312,7 +279,7 @@ fn spawn_simple_star(
         Some(x) => Color::hsl(x.h(), 0.7 + energy * 0.3, 0.2 + 0.7 * energy),
         None => Color::WHITE,
     };
-    commands.spawn((SpriteBundle {
+    cmd.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_basic_texture.0.clone(),
         transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.05 + (energy * 0.05))),
@@ -325,7 +292,7 @@ fn spawn_complex_star(
     y: f32,
     energy: Option<f32>,
     color: Option<Color>,
-    commands: &mut Commands,
+    cmd: &mut Commands,
     star_complex_texture: &StarComplexTexture,
 ) {
     let energy = energy.unwrap_or(1.0);
@@ -333,7 +300,7 @@ fn spawn_complex_star(
         Some(x) => Color::hsl(x.h(), 0.4 + energy * 0.3, 0.2 + 0.7 * energy),
         None => Color::WHITE,
     };
-    commands.spawn((SpriteBundle {
+    cmd.spawn((SpriteBundle {
         sprite: Sprite { color, ..default() },
         texture: star_complex_texture.0.clone(),
         transform: Transform::from_xyz(x, y, 0.).with_scale(Vec3::splat(0.04 + (energy * 0.09))),
@@ -454,7 +421,7 @@ fn spawn_cosmic_wind(
 }
 
 fn dev_row_of_clashing_asteroids(
-    commands: &mut Commands,
+    cmd: &mut Commands,
     asteroid_mesh_handles: &AsteroidMeshHandles,
     asteroid_material_handles: &AsteroidMaterialHandles,
 ) {
@@ -480,7 +447,7 @@ fn dev_row_of_clashing_asteroids(
             Some(20.),
             asteroid_mesh_handles.0.clone(),
             asteroid_material_handles.0.clone(),
-            commands,
+            cmd,
         );
         Asteroid::spawn(
             *size_b,
@@ -491,13 +458,13 @@ fn dev_row_of_clashing_asteroids(
             Some(20.),
             asteroid_mesh_handles.0.clone(),
             asteroid_material_handles.0.clone(),
-            commands,
+            cmd,
         );
     }
 }
 
 fn spawn_cosmic_background(
-    mut commands: &mut Commands,
+    mut cmd: &mut Commands,
     star_core_texture: &StarCoreTexture,
     star_simple_texture: &StarSimpleTexture,
     star_complex_texture: &StarComplexTexture,
@@ -541,7 +508,7 @@ fn spawn_cosmic_background(
                     y as f32 - (height / 2.) + dy,
                     Some(energy),
                     None,
-                    &mut commands,
+                    &mut cmd,
                     &star_core_texture,
                 );
             } else if rand::random::<f32>() > (1. - density_simple) {
@@ -558,7 +525,7 @@ fn spawn_cosmic_background(
                     y as f32 - (height / 2.) + dy,
                     Some(energy),
                     color,
-                    &mut commands,
+                    &mut cmd,
                     &star_simple_texture,
                 );
             } else if rand::random::<f32>() > (1. - density_complex) {
@@ -579,7 +546,7 @@ fn spawn_cosmic_background(
                     y as f32 - (height / 2.) + dy,
                     Some(energy),
                     Some(color),
-                    &mut commands,
+                    &mut cmd,
                     &star_complex_texture,
                 );
             }
